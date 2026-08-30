@@ -37,24 +37,27 @@ export interface Turn {
   created_at?: string;
 }
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`/api/v1${path}`);
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(`/api/v1${path}`, { signal });
   if (!res.ok) throw new Error(`${res.status} ${path}`);
   const body = await res.json();
   return (body.data ?? body) as T;
 }
 
-export const listSessions = () => get<Session[]>(`/sessions`);
+export const listSessions = (signal?: AbortSignal) =>
+  get<Session[]>(`/sessions`, signal);
 
-export const listTurns = (sessionId: string) =>
-  get<Turn[]>(`/sessions/${sessionId}/turns`);
+export const listTurns = (sessionId: string, signal?: AbortSignal) =>
+  get<Turn[]>(`/sessions/${sessionId}/turns`, signal);
 
 export const listTurnEvents = async (
   sessionId: string,
   turnId: string,
+  signal?: AbortSignal,
 ): Promise<TurnEvent[]> => {
   const res = await get<{ events?: TurnEvent[] } | TurnEvent[]>(
     `/sessions/${sessionId}/turns/${turnId}/events`,
+    signal,
   );
   if (Array.isArray(res)) return res;
   return res.events ?? [];

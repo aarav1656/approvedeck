@@ -56,15 +56,25 @@
 }
 
 /* ─── page-load staggered entrance ────────────────────────── */
-@keyframes card-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes card-enter-opacity {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes card-enter-slide {
+  from { transform: translateY(10px); }
+  to   { transform: translateY(0); }
 }
 .card-enter {
-  animation: card-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation:
+    card-enter-opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    card-enter-slide   0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  /* slide uses fill-mode none (default) so no transform is retained post-animation */
 }
+.card-enter { animation-delay: var(--enter-delay, 0ms), var(--enter-delay, 0ms); }
+
+
 /* nth-child stagger applied inline via --delay custom prop */
-.card-enter { animation-delay: var(--enter-delay, 0ms); }
+
 
 /* legacy slide-in kept for compat */
 @keyframes slide-in {
@@ -90,16 +100,17 @@
 /* ─── ambient orb behind pending section ───────────────────── */
 .pending-orb {
   position: relative;
+  overflow: hidden; /* clips the pseudo-element's horizontal bleed */
 }
 .pending-orb::before {
   content: "";
   pointer-events: none;
   position: absolute;
-  inset: -80px -60px;
+  inset: -80px 0; /* zero horizontal inset — glow is purely vertical bleed, clipped above */
   z-index: 0;
   border-radius: 50%;
   background: radial-gradient(
-    ellipse 70% 60% at 50% 40%,
+    ellipse 100% 60% at 50% 40%,
     rgba(255,97,97,0.07) 0%,
     transparent 70%
   );

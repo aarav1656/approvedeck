@@ -7,6 +7,7 @@ import {
   listTurns,
   sendApproval,
 } from "./api";
+import { appendDecision } from "./decisionLog";
 
 // ---------- domain model ----------
 
@@ -84,6 +85,82 @@ export function prettyToolTarget(name: string, args: string): { toolName: string
   }
 }
 
+/** Process one session: returns pending approvals and activity for that session. */
+async function fetchSession(
+  s: Session,
+  signal: AbortSignal,
+): Promise<{ approvals: PendingApproval[]; activity: SessionActivity | null }> {
+  const turns = (await listTurns(s.id, signal)) as unknown as RawTurn[];
+  const last = turns[turns.length - 1];
+  if (!last) return { approvals: [], activity: null };
+
+  const status = last.state?.status ?? "unknown";
+  const required = last.state?.required_actions ?? [];
+
+  let events: TurnEvent[] = [];
+  try {
+    events = await listTurnEvents(s.id, last.id, signal);
+  } catch {
+    /* events may expire from redis; approvals still resolvable from turn state */
+  }
+
+  const calls = collectToolCalls(events);
+  const callList = [...calls.values()].map((c) => {
+    const p = prettyToolTarget(c.name, c.args);
+    return { name: p.toolName, args: p.toolArgs };
+  });
+
+  const pend: PendingApproval[] = [];
+  for (const ra of required) {
+    for (const tc of ra.tool_calls ?? []) {
+      const call = calls.get(tc.id);
+      const pretty = call ? prettyToolTarget(call.name, call.args) : { toolName: "pending tool", toolArgs: "" };
+      const isQuestion = call?.name === "ask_user_question";
+      let question: string | undefined;
+      let options: string[] | undefined;
+      if (isQuestion && call) {
+        try {
+          const parsed = JSON.parse(call.args);
+          question = parsed.question;
+          options = (parsed.options ?? []).map((o: unknown) =>
+            typeof o === "string" ? o : JSON.stringify(o),
+          );
+        } catch { /* partial args */ }
+      }
+      pend.push({
+        sessionId: s.id,
+        sessionTitle: s.title ?? s.id.slice(0, 8),
+        agentName: s.agent?.name ?? "agent",
+        threadId: ra.thread_id ?? "main",
+        toolCallId: tc.id,
+        toolName: pretty.toolName,
+        toolArgs: pretty.toolArgs,
+        since: ra.created_at ?? s.updated_at,
+        kind: ra.type === "tool.approval_required" ? "approval" : "question",
+        question,
+        options,
+      });
+    }
+  }
+
+  const activity: SessionActivity = {
+    session: s,
+    status:
+      required.length > 0
+        ? "waiting"
+        : status === "running"
+          ? "running"
+          : status === "error"
+            ? "error"
+            : "idle",
+    lastToolCalls: callList.slice(-4),
+    metrics: last.state?.metrics ?? {},
+    lastEventAt: s.updated_at,
+  };
+
+  return { approvals: pend, activity };
+}
+
 // ---------- the hook ----------
 
 export function useApprovalFeed(pollMs = 4000) {
@@ -92,85 +169,34 @@ export function useApprovalFeed(pollMs = 4000) {
   const [error, setError] = useState<string | null>(null);
   const [lastPoll, setLastPoll] = useState<Date | null>(null);
   const busy = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
     if (busy.current) return;
     busy.current = true;
+
+    // Cancel any in-flight poll from a previous cycle
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
+
     try {
-      const sessions = await listSessions();
+      const sessions = await listSessions(signal);
+      const slice = sessions.slice(0, 12);
+
+      // Parallelize per-session fetches; failures skip that session
+      const results = await Promise.allSettled(
+        slice.map((s) => fetchSession(s, signal)),
+      );
+
       const pend: PendingApproval[] = [];
       const acts: SessionActivity[] = [];
 
-      for (const s of sessions.slice(0, 12)) {
-        try {
-          const turns = (await listTurns(s.id)) as unknown as RawTurn[];
-          // API returns turns oldest-first; the live turn is the last one.
-          const last = turns[turns.length - 1];
-          if (!last) continue;
-          const status = last.state?.status ?? "unknown";
-          const required = last.state?.required_actions ?? [];
-
-          let events: TurnEvent[] = [];
-          try {
-            events = await listTurnEvents(s.id, last.id);
-          } catch {
-            /* events may expire from redis; approvals still resolvable from turn state */
-          }
-          const calls = collectToolCalls(events);
-          const callList = [...calls.values()].map((c) => {
-            const p = prettyToolTarget(c.name, c.args);
-            return { name: p.toolName, args: p.toolArgs };
-          });
-
-          for (const ra of required) {
-            for (const tc of ra.tool_calls ?? []) {
-              const call = calls.get(tc.id);
-              const pretty = call ? prettyToolTarget(call.name, call.args) : { toolName: "pending tool", toolArgs: "" };
-              const isQuestion = call?.name === "ask_user_question";
-              let question: string | undefined;
-              let options: string[] | undefined;
-              if (isQuestion && call) {
-                try {
-                  const parsed = JSON.parse(call.args);
-                  question = parsed.question;
-                  options = (parsed.options ?? []).map((o: unknown) =>
-                    typeof o === "string" ? o : JSON.stringify(o),
-                  );
-                } catch { /* partial args */ }
-              }
-              pend.push({
-                sessionId: s.id,
-                sessionTitle: s.title ?? s.id.slice(0, 8),
-                agentName: s.agent?.name ?? "agent",
-                threadId: ra.thread_id ?? "main",
-                toolCallId: tc.id,
-                toolName: pretty.toolName,
-                toolArgs: pretty.toolArgs,
-                since: ra.created_at ?? s.updated_at,
-                kind: ra.type === "tool.approval_required" ? "approval" : "question",
-                question,
-                options,
-              });
-            }
-          }
-
-          acts.push({
-            session: s,
-            status:
-              required.length > 0
-                ? "waiting"
-                : status === "running"
-                  ? "running"
-                  : status === "error"
-                    ? "error"
-                    : "idle",
-            lastToolCalls: callList.slice(-4),
-            metrics: last.state?.metrics ?? {},
-            lastEventAt: s.updated_at,
-          });
-        } catch {
-          /* skip unreadable session */
-        }
+      for (const result of results) {
+        if (result.status === "rejected") continue;
+        pend.push(...result.value.approvals);
+        if (result.value.activity) acts.push(result.value.activity);
       }
 
       setApprovals(pend);
@@ -178,6 +204,8 @@ export function useApprovalFeed(pollMs = 4000) {
       setError(null);
       setLastPoll(new Date());
     } catch (e) {
+      // Ignore AbortError — not a real error
+      if (e instanceof Error && e.name === "AbortError") return;
       setError(String(e));
     } finally {
       busy.current = false;
@@ -187,12 +215,28 @@ export function useApprovalFeed(pollMs = 4000) {
   useEffect(() => {
     refresh();
     const t = setInterval(refresh, pollMs);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      abortRef.current?.abort();
+    };
   }, [refresh, pollMs]);
 
   const decide = useCallback(
     async (a: PendingApproval, allow: boolean) => {
+      const clickedAt = Date.now();
+      const latencyMs = a.since
+        ? Math.max(0, clickedAt - new Date(a.since).getTime())
+        : 0;
+
       await sendApproval(a.sessionId, a.threadId, a.toolCallId, allow);
+
+      appendDecision({
+        sessionId: a.sessionId,
+        toolName: a.toolName,
+        decision: allow ? "approve" : "deny",
+        latencyMs,
+      });
+
       setApprovals((prev) => prev.filter((p) => p.toolCallId !== a.toolCallId));
       setTimeout(refresh, 1500);
     },

@@ -12,6 +12,9 @@ for f in os.listdir(OUT):
     os.remove(os.path.join(OUT, f))
 
 CSS_W, CSS_H, DSF = 1280, 800, 1.5  # -> 1920x1200 screenshots
+# The chain-of-custody timeline ships on feat/fleet-timeline, served from the
+# sibling worktree on :5233. Fall back to :5199 if that server is not up.
+APP_URL = "http://localhost:5233"
 frames = []          # {file, beat, cursor:[x,y]|None, click:bool}
 n = [0]
 cursor = [640, 400]  # current synthetic pointer position, CSS px
@@ -44,12 +47,30 @@ def hold(beat, count, click=False, cur=True):
         shot(beat, click=(click and i == 0), cur=cur)
 
 
+def scroll_to_section(title_re, pad=28):
+    """Park the section whose heading matches title_re just below the header.
+
+    scrollIntoView({block:'center'}) is not good enough here: the burned-in
+    caption bar covers the bottom 80 CSS px, so a centred tall section loses
+    its last rows behind the caption. Scrolling by the section's own top
+    keeps the whole spine in the visible band.
+    """
+    js("""(()=>{const rx=new RegExp(%r,'i');
+      const el=[...document.querySelectorAll('section,div,h2')].find(e=>
+        rx.test((e.textContent||'').trim().slice(0,40)) && e.getBoundingClientRect().height>60);
+      if(!el) return 'none';
+      const r=el.getBoundingClientRect();
+      window.scrollTo({top: scrollY + r.top - %d, behavior:'instant'});
+      return 'ok'})()""" % ("^" + title_re, pad))
+    wait(0.7)
+
+
 BTN = ("[...document.querySelectorAll('button')]"
        ".find(x=>x.innerText.trim().toLowerCase()===%r)")
 
 cdp("Emulation.setDeviceMetricsOverride",
     width=CSS_W, height=CSS_H, deviceScaleFactor=DSF, mobile=False)
-goto_url("http://localhost:5199")
+goto_url(APP_URL)
 wait_for_load()
 wait(1.2)
 
@@ -103,21 +124,29 @@ if xy:
     wait(0.8)
     hold("approved", 8, cur=False)
 
-# ── (g) the session spine / agent sessions, scrolled into view ──
-js("""(()=>{const h=[...document.querySelectorAll('*')].find(e=>
-      /agent sessions|chain of custody/i.test(e.textContent||'') && e.children.length<9);
-     if(h) h.scrollIntoView({block:'center'}); else window.scrollTo(0, 700);
-     return 'scrolled'})()""")
-wait(0.7)
-hold("custody", 9, cur=False)
+# ── (g) chain of custody: click a real session so its spine replays ──
+ROW = """[...document.querySelectorAll('div')].filter(e=>
+  /run_readonly_query|analyze_operation|list_tools/i.test(e.innerText||'')
+  && e.innerText.length<200)[0]"""
+xy = rect(ROW)
+if xy:
+    cursor[:] = xy
+    hold("aim-session", 3)
+    js("(%s)?.click()" % ROW)
+    wait(1.0)
+    # the ripple must land on the row that was actually clicked, so capture
+    # the click frames before scrolling away from it
+    hold("custody", 5, click=True)
 
-# ── (h) the decision log updating ──
-js("""(()=>{const h=[...document.querySelectorAll('*')].find(e=>
-      /decision log/i.test(e.textContent||'') && e.children.length<9);
-     if(h) h.scrollIntoView({block:'center'}); else window.scrollTo(0,document.body.scrollHeight);
-     return 'scrolled'})()""")
-wait(0.7)
-hold("log", 9, cur=False)
+# scroll the custody spine itself into view so the durations are readable.
+# The caption bar eats the bottom 120px of screen (80 CSS px at dsf 1.5), so
+# the section is parked above it rather than centred.
+scroll_to_section("chain of custody")
+hold("custody-spine", 8, cur=False)
+
+# ── (h) the decision log, with the approval we just made ──
+scroll_to_section("decision log")
+hold("log", 8, cur=False)
 
 meta = {"css": [CSS_W, CSS_H], "dsf": DSF, "frames": frames}
 with open(os.path.join(OUT, "beats.json"), "w") as fh:

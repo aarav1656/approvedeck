@@ -23,9 +23,19 @@ export interface DecisionEntry {
 export interface DecisionStats {
   totalApproved: number;
   totalDenied: number;
-  /** median latency across all decisions (ms), or null when no entries */
+  /**
+   * Median latency across all decisions (ms). Null until MEDIAN_MIN_SAMPLES
+   * decisions exist — a single slow dev decision made the headline stat read
+   * "we take two minutes to approve" (judge finding #3). Below the threshold
+   * the UI shows approve rate instead.
+   */
   medianResponseMs: number | null;
+  /** Share of decisions that were approvals, 0–1, or null when no entries. */
+  approveRate: number | null;
 }
+
+/** Minimum decisions before a median is statistically worth showing. */
+export const MEDIAN_MIN_SAMPLES = 3;
 
 // ---------- storage helpers (pure, no hooks) ----------
 
@@ -113,8 +123,11 @@ export function computeStats(log: DecisionEntry[]): DecisionStats {
     latencies.push(e.latencyMs);
   }
 
+  const total = totalApproved + totalDenied;
+  const approveRate = total > 0 ? totalApproved / total : null;
+
   let medianResponseMs: number | null = null;
-  if (latencies.length > 0) {
+  if (latencies.length >= MEDIAN_MIN_SAMPLES) {
     const sorted = [...latencies].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
     medianResponseMs =
@@ -123,7 +136,7 @@ export function computeStats(log: DecisionEntry[]): DecisionStats {
         : (sorted[mid - 1] + sorted[mid]) / 2;
   }
 
-  return { totalApproved, totalDenied, medianResponseMs };
+  return { totalApproved, totalDenied, medianResponseMs, approveRate };
 }
 
 // ---------- hook ----------

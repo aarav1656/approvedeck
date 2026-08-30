@@ -397,10 +397,6 @@ function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterD
       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot[act.status]}`} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] text-ink font-medium">{label}</div>
-<<<<<<< Updated upstream
-        {/* sparkline token bar */}
-=======
->>>>>>> Stashed changes
         {totalTok > 0 && (
           <div className="mt-1.5 flex items-center gap-2">
             <div className="token-track">

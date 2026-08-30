@@ -199,6 +199,8 @@ button.kbd:hover { color: var(--color-ink); border-color: #3a3d3e; }
   border-top: 1px solid var(--color-hairline);
   padding-top: 20px;
   margin-top: 32px;
+  /* clears the sticky header when the pane is scrolled to */
+  scroll-margin-top: 88px;
 }
 .tl-title {
   font-size: 12px;
@@ -242,6 +244,8 @@ button.kbd:hover { color: var(--color-ink); border-color: #3a3d3e; }
   margin-top: 14px;
   padding-left: 18px;
   list-style: none;
+  max-height: 560px;
+  overflow-y: auto;
 }
 .tl-spine::before {
   content: "";
@@ -257,7 +261,14 @@ button.kbd:hover { color: var(--color-ink); border-color: #3a3d3e; }
   display: flex;
   gap: 10px;
   padding: 6px 0;
+  /* a measure, not a full-bleed row: timestamps stay near the text */
+  max-width: 760px;
 }
+/* routine tool traffic recedes so the gate and the decision carry the eye */
+.tl-node[data-kind="tool"] .tl-label { color: var(--color-mute); }
+.tl-node[data-kind="tool"] .tl-detail,
+.tl-node[data-kind="turn"] .tl-detail { color: rgba(106, 107, 108, 0.6); }
+.tl-node[data-kind="turn"] .tl-label { color: var(--color-ash); font-size: 11px; }
 .tl-node + .tl-node { border-top: 1px solid rgba(255, 255, 255, 0.035); }
 .tl-dot {
   position: absolute;

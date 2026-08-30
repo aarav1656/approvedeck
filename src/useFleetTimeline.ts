@@ -253,9 +253,13 @@ export function deriveTimeline(input: DeriveInput): TimelineNode[] {
   return nodes;
 }
 
+/**
+ * One-line gist of a tool response. JSON bodies arrive pretty-printed, so a
+ * naive first-line read yields a lone "{"; collapse whitespace instead.
+ */
 function firstLine(s: string): string {
-  const line = s.split("\n")[0].trim();
-  return line.length > 96 ? `${line.slice(0, 96)}…` : line;
+  const flat = s.replace(/\s+/g, " ").trim();
+  return flat.length > 96 ? `${flat.slice(0, 96)}…` : flat;
 }
 
 function tokenLine(metrics?: Record<string, number>): string | undefined {
@@ -306,7 +310,14 @@ export function useFleetTimeline(
   const abortRef = useRef<AbortController | null>(null);
   const sessionId = session?.id ?? null;
 
+  // The feed hands us a fresh Session object on every 4s poll. Reading it
+  // through a ref keeps `load` stable, so the spine is not torn down and
+  // refetched (and its scroll position lost) four times a minute.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
   const load = useCallback(async () => {
+    const session = sessionRef.current;
     if (!session) {
       setNodes([]);
       return;
@@ -349,7 +360,7 @@ export function useFleetTimeline(
       busy.current = false;
       setLoading(false);
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     setNodes([]);

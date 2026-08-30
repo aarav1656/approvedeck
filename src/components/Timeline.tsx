@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "../api";
 import { type TimelineNode, useFleetTimeline } from "../useFleetTimeline";
 import { buildReceipt, receiptToText } from "../custodyReceipt";
@@ -137,6 +137,21 @@ export function Timeline({
     download(receiptToText(receipt), receipt.session.id);
   }, [receipt]);
 
+  // The gate is the reason anyone opens this pane, so scroll it into view once
+  // per session rather than leaving the reader at the top of 40 routine calls.
+  const spineRef = useRef<HTMLOListElement>(null);
+  const focusedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const sid = session?.id ?? null;
+    if (!sid || focusedFor.current === sid) return;
+    const spine = spineRef.current;
+    const gate = spine?.querySelector<HTMLElement>('[data-kind="gate"]');
+    if (!spine || !gate) return;
+    focusedFor.current = sid;
+    // Set scrollTop directly: scrollIntoView would also move the page.
+    spine.scrollTop = Math.max(0, gate.offsetTop - spine.clientHeight / 2);
+  }, [session?.id, nodes.length]);
+
   if (!session) {
     return (
       <div className="tl-pane">
@@ -182,7 +197,7 @@ export function Timeline({
       )}
 
       {nodes.length > 0 && (
-        <ol className="tl-spine">
+        <ol className="tl-spine" ref={spineRef}>
           {nodes.map((n, i) => (
             <TimelineRow key={n.id} node={n} index={i} />
           ))}

@@ -152,7 +152,7 @@ describe("decisionLog: computeStats", () => {
     expect(computeStats(log).medianResponseMs).toBe(200);
   });
 
-  it("computes median for even number of entries", () => {
+  it("suppresses median below MEDIAN_MIN_SAMPLES (2 entries)", () => {
     const log = [100, 300].map((latencyMs, i) => ({
       id: String(i),
       timestamp: "",
@@ -161,13 +161,29 @@ describe("decisionLog: computeStats", () => {
       decision: "deny" as const,
       latencyMs,
     }));
-    // sorted: [100, 300] -> median = (100+300)/2 = 200
-    expect(computeStats(log).medianResponseMs).toBe(200);
+    // n=2 < MEDIAN_MIN_SAMPLES(3): median hidden, approve rate shown instead
+    expect(computeStats(log).medianResponseMs).toBeNull();
+    expect(computeStats(log).approveRate).toBe(0);
   });
 
-  it("works for a single entry", () => {
+  it("computes median for even number of entries at/above threshold", () => {
+    const log = [100, 300, 500, 700].map((latencyMs, i) => ({
+      id: String(i),
+      timestamp: "",
+      sessionId: "s",
+      toolName: "t",
+      decision: "deny" as const,
+      latencyMs,
+    }));
+    // sorted: [100, 300, 500, 700] -> median = (300+500)/2 = 400
+    expect(computeStats(log).medianResponseMs).toBe(400);
+  });
+
+  it("suppresses median for a single entry, reports approve rate", () => {
     const log = [{ id: "1", timestamp: "", sessionId: "s", toolName: "t", decision: "approve" as const, latencyMs: 750 }];
-    expect(computeStats(log).medianResponseMs).toBe(750);
+    // Judge finding #3: one slow dev decision must never become the hero stat
+    expect(computeStats(log).medianResponseMs).toBeNull();
+    expect(computeStats(log).approveRate).toBe(1);
   });
 });
 

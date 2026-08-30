@@ -4,6 +4,7 @@ import { useDecisionLog } from "./decisionLog";
 import { isDestructive } from "./destructive";
 import { isDemoCard } from "./demoCards";
 import { useHoldToArm } from "./useHoldToArm";
+import { Timeline } from "./components/Timeline";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -418,7 +419,7 @@ const statusTokenColor: Record<SessionActivity["status"], string> = {
   error: "token-fill-idle",
 };
 
-function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterDelay: number; dimmed: boolean }) {
+function ActivityRow({ act, enterDelay, dimmed, selected, onSelect }: { act: SessionActivity; enterDelay: number; dimmed: boolean; selected: boolean; onSelect: () => void }) {
   const m = act.metrics;
   const totalTok = m.total_tokens ?? 0;
   const ratio = tokenRatio(totalTok);
@@ -426,7 +427,15 @@ function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterD
 
   return (
     <div
-      className="row-enter flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-elevated"
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        // Space only: Enter is the global approve shortcut and must not be shadowed.
+        if (e.key === " ") { e.preventDefault(); onSelect(); }
+      }}
+      className={`row-enter flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-elevated ${selected ? "rail-row-selected" : ""}`}
       style={{
         "--enter-delay": `${enterDelay}ms`,
         opacity: dimmed ? 0.24 : 1,
@@ -580,6 +589,14 @@ export default function App() {
     useApprovalFeed();
   const waiting = approvals.filter((a) => a.kind === "approval");
   const questions = approvals.filter((a) => a.kind === "question");
+
+  // Chain-of-custody: which session the timeline is replaying. Null means
+  // "follow the pending approval"; an explicit rail click pins a session.
+  const [pinnedSessionId, setPinnedSessionId] = useState<string | null>(null);
+  const pendingSessionId = waiting[0]?.sessionId ?? null;
+  const timelineSessionId = pinnedSessionId ?? pendingSessionId;
+  const timelineSession =
+    activity.find((a) => a.session.id === timelineSessionId)?.session ?? null;
 
   // Keyboard queue state
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -840,7 +857,16 @@ export default function App() {
           </h2>
           <div className="queue-well well-divide">
             {activity.map((act, i) => (
-              <ActivityRow key={act.session.id} act={act} enterDelay={100 + i * 30} dimmed={focusMode} />
+              <ActivityRow
+                key={act.session.id}
+                act={act}
+                enterDelay={100 + i * 30}
+                dimmed={focusMode}
+                selected={act.session.id === timelineSessionId}
+                onSelect={() =>
+                  setPinnedSessionId((prev) => (prev === act.session.id ? null : act.session.id))
+                }
+              />
             ))}
             {activity.length === 0 && !error && (
               <div
@@ -858,6 +884,20 @@ export default function App() {
             {error && <ErrorBanner />}
           </div>
         </aside>
+
+        {/* ── chain of custody: the audit spine for the selected session ── */}
+        <section
+          className="md:col-span-2"
+          style={{
+            opacity: focusMode ? 0.24 : 1,
+            transition: "opacity 200ms ease",
+          }}
+        >
+          <Timeline
+            session={timelineSession}
+            onClose={pinnedSessionId ? () => setPinnedSessionId(null) : undefined}
+          />
+        </section>
 
         {/* ── decision log: full-width row below the grid (judge finding #2) ── */}
         <section

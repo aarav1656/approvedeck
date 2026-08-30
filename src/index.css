@@ -193,3 +193,163 @@ button.kbd:hover { color: var(--color-ink); border-color: #3a3d3e; }
   .btn-approve:active, .btn-deny:active { transform: none; }
   .token-fill, .expand-pre { transition: none; }
 }
+/* ─── chain of custody timeline (feat/fleet-timeline) ───────────────
+   Appended only; nothing above this block is modified. */
+.tl-pane {
+  border-top: 1px solid var(--color-hairline);
+  padding-top: 20px;
+  margin-top: 32px;
+}
+.tl-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(106, 107, 108, 0.8);
+}
+.tl-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-ash);
+}
+.tl-empty {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-ash);
+  max-width: 46ch;
+}
+.tl-error {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--color-accent-yellow);
+}
+
+.tl-btn {
+  border: 1px solid var(--color-hairline);
+  background: var(--color-elevated);
+  color: var(--color-body);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 11px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.tl-btn:hover { color: var(--color-ink); border-color: rgba(87, 193, 255, 0.4); }
+
+/* the spine */
+.tl-spine {
+  position: relative;
+  margin-top: 14px;
+  padding-left: 18px;
+  list-style: none;
+}
+.tl-spine::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--color-hairline);
+}
+.tl-node {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+}
+.tl-node + .tl-node { border-top: 1px solid rgba(255, 255, 255, 0.035); }
+.tl-dot {
+  position: absolute;
+  left: -18px;
+  top: 12px;
+  height: 7px;
+  width: 7px;
+  border-radius: 50%;
+  background: var(--color-ash);
+  box-shadow: 0 0 0 3px var(--color-canvas);
+}
+.tl-dot-session  { background: var(--color-ink); }
+.tl-dot-turn     { background: #3a3d3f; }
+.tl-dot-tool     { background: var(--color-ash); }
+.tl-dot-thread   { background: var(--color-accent-blue); }
+.tl-dot-gate     { background: var(--color-accent-yellow); }
+.tl-dot-question { background: var(--color-accent-blue); }
+.tl-dot-exec     { background: var(--color-accent-green); }
+.tl-node[data-kind="decision"] .tl-dot { background: var(--color-accent-green); }
+.tl-node[data-decision="deny"] .tl-dot { background: var(--color-accent-red); }
+
+/* a gate is the one node allowed to draw attention */
+.tl-node[data-kind="gate"] {
+  background: rgba(255, 197, 51, 0.05);
+  border-left: 2px solid rgba(255, 197, 51, 0.55);
+  margin-left: -10px;
+  padding-left: 8px;
+  border-radius: 0 4px 4px 0;
+}
+.tl-node[data-kind="thread"] {
+  background: rgba(87, 193, 255, 0.045);
+  border-left: 2px solid rgba(87, 193, 255, 0.4);
+  margin-left: -10px;
+  padding-left: 8px;
+  border-radius: 0 4px 4px 0;
+}
+
+.tl-label {
+  font-size: 12px;
+  line-height: 1.45;
+  background: none;
+  border: none;
+  padding: 0;
+  word-break: break-word;
+}
+.tl-label-clickable { text-decoration: underline dotted rgba(255, 255, 255, 0.18); text-underline-offset: 3px; }
+.tl-label-clickable:hover { text-decoration-color: rgba(87, 193, 255, 0.7); }
+
+.tl-detail {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-ash);
+  word-break: break-word;
+}
+.tl-time { font-size: 11px; color: rgba(106, 107, 108, 0.7); flex-shrink: 0; }
+
+.tl-chip {
+  border: 1px solid var(--color-hairline);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 16px;
+  color: var(--color-ash);
+  flex-shrink: 0;
+}
+.tl-chip-green { color: var(--color-accent-green); border-color: rgba(89, 212, 153, 0.35); }
+.tl-chip-red   { color: var(--color-accent-red);   border-color: rgba(255, 97, 97, 0.35); }
+.tl-chip-blue  { color: var(--color-accent-blue);  border-color: rgba(87, 193, 255, 0.35); }
+.tl-chip-amber { color: var(--color-accent-yellow); border-color: rgba(255, 197, 51, 0.35); }
+
+.tl-payload {
+  margin-top: 6px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  background: var(--color-canvas);
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--color-body);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* session rail becomes selectable */
+.rail-row-selected {
+  box-shadow: inset 0 0 0 1px rgba(87, 193, 255, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-node { animation: none !important; opacity: 1; }
+  .tl-payload { transition: none; }
+}

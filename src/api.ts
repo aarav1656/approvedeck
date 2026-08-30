@@ -20,8 +20,18 @@ export interface TurnEvent {
     tool_info?: { name?: string };
   }[];
   tool_call_id?: string;
+  /** thread.created / thread.done: subagent label. */
+  title?: string;
+  /** thread.created: the spawned subagent's identity and brief. */
+  agent_info?: { type?: string; name?: string; input?: string };
+  /** thread.created / thread.done: the tool call in the parent that spawned it. */
+  parent?: { tool_call_id?: string; thread_id?: string };
   state?: {
     status?: string;
+    /** turn.done error text. */
+    message?: string;
+    /** thread.done subagent result. */
+    output?: { content?: string };
     required_actions?: {
       type: string;
       thread_id?: string;

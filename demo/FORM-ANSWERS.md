@@ -1,45 +1,46 @@
 # ApproveDeck submission form answers (aarav1656)
 
 ## Project name
+
 ApproveDeck
 
 ## One-liner
-Mission control for TrueForge approvals: every agent waiting on a human,
-across every session, in one deck, with one-click Approve/Deny that resumes
-the agent through the harness API.
+
+Mission control for TrueForge approvals: every agent waiting on a human, across every session, in one keyboard-driven deck, with hold-to-arm safety for destructive tools.
 
 ## Repo
+
 https://github.com/aarav1656/approvedeck
 
-## What it does / how it uses TrueForge
-Agent harnesses stop before anything irreversible: that is the point. But the
-human side of that contract is underserved: with several sessions running,
-an approval gate fires in a chat tab you are not looking at, and the agent
-sits blocked.
+## Demo video
 
-ApproveDeck is a dedicated approval surface built entirely on the TrueForge
-REST API:
+https://files.catbox.moe/od6dtw.mp4
 
-- Polls /sessions, /turns and /events and surfaces every
-  tool.approval_required pause across all sessions as a card: agent, session,
-  the exact MCP tool and its full JSON payload, and wait time. Destructive
-  tools (execute/delete/drop) get a red pulse.
-- One-click Approve/Deny posts a user.tool_approval turn input back to the
-  session; the agent resumes immediately. Deny carries a reason.
-- Fleet sidebar: every session with live status (running/waiting/idle/error),
-  recent tool calls, token spend.
-- ask_user_question pauses surface too, so everything blocked on a human is
-  in one place.
+## What it does
 
-Verified end to end with no mocks: a real database-guardian agent hit its
-approval gate, the card appeared, we clicked Approve in ApproveDeck, and the
-operation executed against a live Postgres database with a sandbox-verified
-rollback on file. Screenshots in the repo are from that run.
+TrueForge agent harnesses pause before anything irreversible. ApproveDeck is the operator surface for that pause: instead of watching one chat tab per agent, you see every `tool.approval_required` gate across all sessions in a single approval deck.
 
-Design: Raycast-style dark system (near-black canvas, hairline borders,
-Inter ss03), tokens in Tailwind v4 @theme, accents reserved for meaning
-(red = waiting on you, green = approve, blue = running).
+Each card shows: the agent, the session, the exact MCP tool name, the full JSON payload, and how long the agent has been waiting. Destructive tools (matched on tool name and payload arguments) get a red pulse border, focus-dim, and a mandatory 650 ms hold-to-arm gate so accidental approvals are impossible.
+
+The deck is keyboard-first: `j`/`k` navigate, `Enter` approves (hold for destructive), `d` opens a deny-reason chip set (`wrong env` / `too broad` / `needs human` / `policy`) plus free text. A decision log in the sidebar tracks approve/deny counts and median response time.
+
+## How it uses TrueForge
+
+ApproveDeck talks exclusively to the TrueForge REST API. No mocks, no fakes.
+
+Poll loop (2 s interval):
+- `GET /sessions` -- list all sessions
+- `GET /sessions/:id/turns` -- read turns per session
+- Find turns where `required_actions` contains a `tool.approval_required` event; surface as a card
+
+Approve action:
+- `POST /sessions/:id/turns` with `{ "input": { "type": "user.tool_approval", "approved": true } }`
+
+Deny action:
+- `POST /sessions/:id/turns` with `{ "input": { "type": "user.tool_approval", "approved": false, "reason": "..." } }`
+
+Verified end to end: a real SafeRun database-guardian agent hit its `execute_approved_operation` gate, the card appeared in ApproveDeck, Approve was clicked in this UI, and the operation ran against a live Postgres database (23 payments deleted, sandbox-verified rollback on file). Screenshots in the repo are from that run.
 
 ## AI use disclosure
-AI coding assistants were used throughout; all code is understood and
-explainable. PRs reviewed via Qodo.
+
+AI coding assistants (Cursor, Claude) were used throughout development. All generated code was reviewed, understood, and tested before merging. Every substantive PR went through a Qodo review cycle; commit `46bcd60` resolves the 6 bugs that review surfaced.

@@ -2,73 +2,94 @@
 
 **Mission control for TrueForge approvals.**
 
-An agent harness that stops before anything irreversible is only half the
-story. The other half is the human: where do all those approval requests go
-when you run five agents at once?
+[![Demo video](https://img.shields.io/badge/demo-video-red)](https://files.catbox.moe/od6dtw.mp4)
 
-TrueForge's chat UI shows approvals one session at a time. ApproveDeck shows
-**every agent waiting on a human, across every session, in one deck**: what
-the agent wants to run, the exact tool payload, how long it has been waiting,
-and one-click Approve / Deny that resumes the agent through the TrueForge API.
+> **[Watch the demo](https://files.catbox.moe/od6dtw.mp4)** -- every interaction shown live against a real TrueForge session.
 
-![pending approval](screenshot-pending.png)
+![ApproveDeck approval gate](docs-shots/deck-final-gate.png)
 
-## What it does
+---
 
-- **Approval inbox**: polls the TrueForge REST API (`/sessions`, `/turns`,
-  `/events`) and surfaces every `tool.approval_required` pause across all
-  sessions. Destructive-looking tools (execute/delete/drop) get a red pulse.
-- **Payload inspection**: the exact MCP tool call and its full JSON arguments,
-  one click away, so you approve what the agent is actually doing, not a vibe.
-- **One-click decide**: Approve or Deny posts a `user.tool_approval` turn to
-  the session and the agent resumes immediately. Deny carries a reason.
-- **Fleet view**: every agent session with live status (running / waiting /
-  idle / error), recent tool calls, and token spend.
-- **Open questions**: `ask_user_question` pauses are listed too, so you can
-  see which agents are blocked on context, not just on permission.
+## What you are looking at
 
-## Why this exists
+- A real-time **approval inbox** that polls the TrueForge REST API and surfaces every `tool.approval_required` pause across all agent sessions as a card -- tool name, full JSON payload, session, and wait time.
+- A **keyboard-first queue**: `j` / `k` navigate cards, `Enter` approves, `d` denies, `Esc` clears focus. Auto-scrolls. No mouse needed.
+- A **hold-to-arm gate** (650 ms with a visible fill bar, keyboard and touch parity) on destructive tools so accidental approvals are structurally impossible.
+- A **deny-reason chip set** (`wrong env` / `too broad` / `needs human` / `policy`) plus free text, required before a destructive deny is accepted.
+- A **decision log** with approve/deny counts and median response-time stats, persisted in the sidebar, so you know how fast the human loop actually is.
 
-We built [SafeRun](https://github.com/kamalbuilds/saferun) (a database
-guardian agent) during the same hackathon and immediately hit the operator
-problem: with several sessions running, an approval gate fired in a tab we
-were not looking at, and an agent sat blocked for twenty minutes. The harness
-did its job. The human missed it. ApproveDeck is the missing pager.
+---
+
+## Interaction reference
+
+| Action | Keyboard | Mouse / touch |
+|---|---|---|
+| Next card | `j` or `ArrowDown` | Click card |
+| Previous card | `k` or `ArrowUp` | Click card |
+| Approve | `Enter` (safe) / hold `Enter` 650 ms (destructive) | Hold Approve button |
+| Deny | `d` then pick reason | Click Deny, pick chip |
+| Focus mode | auto on destructive select | -- |
+| Clear focus | `Esc` | Click elsewhere |
+
+Destructive tools (matched on tool name **and** payload arguments) trigger:
+- Red pulse border
+- Focus dim (everything else to 0.24 opacity)
+- Mandatory hold-to-arm (650 ms fill bar, cancels on release or window blur)
+
+---
+
+## How it talks to TrueForge
+
+```
+Poll every 2 s:
+  GET /api/sessions                         list all sessions
+  GET /api/sessions/:id/turns               read turns for each
+  find turns where event == "required_actions"
+    and input.type == "tool.approval_required"
+
+Approve:
+  POST /api/sessions/:id/turns
+  { "input": { "type": "user.tool_approval", "approved": true } }
+
+Deny:
+  POST /api/sessions/:id/turns
+  { "input": { "type": "user.tool_approval", "approved": false, "reason": "..." } }
+```
+
+No mocks. Verified end to end against a live SafeRun agent: 23 payments deleted from a real Postgres database, sandbox-verified rollback on file, approval clicked in this UI.
+
+---
 
 ## Run it
 
 ```bash
-# 1. TrueForge running locally
-npx @truefoundry/trueforge          # http://localhost:8790
+# 1. Start TrueForge
+npx @truefoundry/trueforge          # listens on http://localhost:8790
 
-# 2. ApproveDeck
+# 2. Start ApproveDeck
 npm install
-npm run dev                          # http://localhost:5199 (proxies /api -> 8790)
+npm run dev                          # http://localhost:5199 (proxies /api -> :8790)
 ```
 
-Run any agent with approval-gated tools. When it pauses, the card appears.
+Start any TrueForge agent with approval-gated tools. When it pauses, the card appears instantly.
 
-## Verified end to end
+Press **Demo** in the header to preview a full deck (approve / deny / hold-to-arm / focus mode) without TrueForge running.
 
-No mocks: during development a real SafeRun agent hit its
-`execute_approved_operation` gate, ApproveDeck showed the card, we clicked
-Approve **in this UI**, and the operation executed against a live Postgres
-database (23 payments deleted with a sandbox-verified rollback on file,
-then restored). Screenshots in this repo are from that run.
+---
 
-## Design
+## Tests
 
-Raycast-style dark system: near-black canvas (#07080a), hairline borders,
-Inter with ss03, saturated accents reserved for meaning (red = waiting on
-you, green = approve, blue = running). Tokens live in `src/index.css`
-(Tailwind v4 `@theme`).
+```bash
+npm test       # vitest -- 29 / 29 green
+```
+
+The hold-to-arm controller has 10 unit tests covering arm, release, cancel, window-blur cancel, and in-flight guard. All other hooks covered with state transition tests.
+
+---
 
 ## Built during the Agent Harness Hackathon
 
-August 24–30, 2026 · WeMakeDevs × TrueFoundry × Qodo.
-AI coding assistants were used (disclosed per rules); every substantive
-change goes through a Qodo-reviewed pull request.
+August 24-30, 2026 -- WeMakeDevs x TrueFoundry x Qodo.
+AI coding assistants used (disclosed per rules); every substantive change reviewed via Qodo.
 
-## Qodo Code Review Evidence
-
-<!-- filled after review cycle -->
+Qodo review: commit `46bcd60` fixes the 6 bugs from that review cycle (exec regex, Enter auto-repeat guard, `d` deny activation, keyboard hold parity, touchcancel, auto-select).

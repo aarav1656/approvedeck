@@ -1,0 +1,86 @@
+// TrueForge REST API client (proxied via /api -> localhost:8790)
+
+export interface Session {
+  id: string;
+  title: string | null;
+  agent: { name?: string } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TurnEvent {
+  type: string;
+  id?: string;
+  created_at?: string;
+  thread_id?: string | null;
+  content?: unknown;
+  tool_calls?: {
+    id?: string;
+    function?: { name?: string; arguments?: string };
+    tool_info?: { name?: string };
+  }[];
+  tool_call_id?: string;
+  state?: {
+    status?: string;
+    required_actions?: {
+      type: string;
+      thread_id?: string;
+      tool_calls?: { id: string }[];
+    }[];
+    metrics?: Record<string, number>;
+  };
+}
+
+export interface Turn {
+  id: string;
+  status?: string;
+  created_at?: string;
+}
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`/api/v1${path}`);
+  if (!res.ok) throw new Error(`${res.status} ${path}`);
+  const body = await res.json();
+  return (body.data ?? body) as T;
+}
+
+export const listSessions = () => get<Session[]>(`/sessions`);
+
+export const listTurns = (sessionId: string) =>
+  get<Turn[]>(`/sessions/${sessionId}/turns`);
+
+export const listTurnEvents = async (
+  sessionId: string,
+  turnId: string,
+): Promise<TurnEvent[]> => {
+  const res = await get<{ events?: TurnEvent[] } | TurnEvent[]>(
+    `/sessions/${sessionId}/turns/${turnId}/events`,
+  );
+  if (Array.isArray(res)) return res;
+  return res.events ?? [];
+};
+
+/** Send an approval decision. Streams the resumed turn; we just fire it. */
+export async function sendApproval(
+  sessionId: string,
+  threadId: string,
+  toolCallId: string,
+  allow: boolean,
+): Promise<void> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/turns`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      input: [
+        {
+          type: "user.tool_approval",
+          thread_id: threadId,
+          tool_call_id: toolCallId,
+          approval: allow ? { status: "allow" } : { status: "deny", reason: "Denied from ApproveDeck" },
+        },
+      ],
+      stream: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`approval failed: ${res.status}`);
+}

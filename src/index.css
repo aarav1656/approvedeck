@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #07080a;
+  --color-surface: #0d0d0d;
+  --color-elevated: #101111;
+  --color-card: #121212;
+  --color-ink: #f4f4f6;
+  --color-body: #cdcdcd;
+  --color-mute: #9c9c9d;
+  --color-ash: #6a6b6c;
+  --color-hairline: #242728;
+  --color-accent-blue: #57c1ff;
+  --color-accent-red: #ff6161;
+  --color-accent-green: #59d499;
+  --color-accent-yellow: #ffc533;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    font-feature-settings: "calt", "kern", "liga", "ss03";
+    background: var(--color-canvas);
+    color: var(--color-body);
+  }
+  button, [role="button"] { cursor: pointer; }
+}
+
+.hairline { border: 1px solid var(--color-hairline); }
+.glow-red { box-shadow: 0 0 0 1px rgba(255,97,97,0.35), 0 0 24px rgba(255,97,97,0.12); }
+.glow-green { box-shadow: 0 0 0 1px rgba(89,212,153,0.35), 0 0 24px rgba(89,212,153,0.10); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(255,97,97,0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(255,97,97,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,97,97,0); }
+}
+.pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-in { animation: slide-in .25s ease-out both; }

@@ -247,7 +247,7 @@ function ActivityRow({ act, enterDelay }: { act: SessionActivity; enterDelay: nu
       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot[act.status]}`} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] text-ink font-medium">{label}</div>
-        {/* sparkline token bar */}
+        {/* sparkline token bar — shown whenever we have token data */}
         {totalTok > 0 && (
           <div className="mt-1.5 flex items-center gap-2">
             <div className="token-track">
@@ -261,10 +261,15 @@ function ActivityRow({ act, enterDelay }: { act: SessionActivity; enterDelay: nu
             </span>
           </div>
         )}
-        {totalTok === 0 && (
+        {/* tool-call line — always shown when tool calls are present (including alongside the token bar) */}
+        {act.lastToolCalls.length > 0 && (
           <div className="truncate text-[12px] text-ash font-mono mt-0.5">
-            {act.lastToolCalls.map((c) => c.name.split(" ")[0]).join(" · ") || "no activity"}
+            {act.lastToolCalls.map((c) => c.name.split(" ")[0]).join(" · ")}
           </div>
+        )}
+        {/* fallback: no tokens and no tool calls */}
+        {totalTok === 0 && act.lastToolCalls.length === 0 && (
+          <div className="truncate text-[12px] text-ash font-mono mt-0.5">no activity</div>
         )}
       </div>
       <div className="text-right text-[12px] shrink-0">

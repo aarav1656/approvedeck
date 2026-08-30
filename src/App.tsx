@@ -56,68 +56,28 @@ function StatusPill({
       <span className="status-pill-dot" />
       all clear
       {lastPoll && (
-        <span className="text-[#59d499]/60 ml-1">· {timeAgo(lastPoll.toISOString())}</span>
+        <span className="text-ash ml-1 tabular-nums">· {timeAgo(lastPoll.toISOString())}</span>
       )}
     </span>
   );
 }
 
 // ─── EmptyState ───────────────────────────────────────────────────────────────
+// A quiet row that still belongs to the queue, not a centered icon sermon.
 
 function EmptyState({ onDemo }: { onDemo: () => void }) {
   return (
-    <div className="rounded-xl bg-surface hairline px-6 py-14 text-center overflow-hidden">
-      {/* animated rings + shield icon */}
-      <div className="relative mx-auto mb-6 flex h-16 w-16 items-center justify-center">
-        <span
-          className="ring-pulse absolute inset-0 rounded-full border border-accent-green/30"
-          aria-hidden
-        />
-        <span
-          className="ring-pulse ring-pulse-delay absolute inset-0 rounded-full border border-accent-green/20"
-          aria-hidden
-        />
-        <span className="shield-enter relative flex h-16 w-16 items-center justify-center rounded-full bg-accent-green/10 border border-accent-green/25">
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 28 28"
-            fill="none"
-            className="text-accent-green"
-            aria-hidden
-          >
-            <path
-              d="M14 2.5L4.5 6.5V13.5C4.5 18.8 8.7 23.7 14 25.5C19.3 23.7 23.5 18.8 23.5 13.5V6.5L14 2.5Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-              fill="rgba(89,212,153,0.08)"
-            />
-            <path
-              d="M9.5 14L12.5 17L18.5 11"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </div>
-      <div className="text-ink text-[15px] font-semibold">Nothing waiting on you</div>
-      <div className="mt-1.5 text-[13px] text-ash max-w-[280px] mx-auto leading-relaxed">
-        Agents keep working autonomously. When one hits an approval gate it appears here instantly.
-      </div>
-      <div className="mt-4 text-[12px] text-ash/70 leading-relaxed">
-        Start one with <span className="font-mono text-body">npx @truefoundry/trueforge</span>
-        <span className="mx-1.5">·</span>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-[18px] text-left">
+      <span className="text-[13px] font-medium text-ink tracking-[-0.015em]">Queue clear</span>
+      <span className="text-[12px] text-ash">Nothing needs a human.</span>
+      <span className="ml-auto flex items-center gap-1.5 text-[12px] text-ash">
+        Run
+        <kbd className="kbd kbd-mono">npx @truefoundry/trueforge</kbd>
         or
-        <button
-          onClick={onDemo}
-          className="ml-1.5 rounded-md border border-hairline bg-elevated px-2 py-0.5 text-[12px] text-body hover:text-ink hover:border-accent-blue/40 transition-colors"
-        >
-          preview a gate
+        <button onClick={onDemo} className="kbd">
+          load demo
         </button>
-      </div>
+      </span>
     </div>
   );
 }

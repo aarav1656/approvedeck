@@ -104,7 +104,8 @@ export function useApprovalFeed(pollMs = 4000) {
       for (const s of sessions.slice(0, 12)) {
         try {
           const turns = (await listTurns(s.id)) as unknown as RawTurn[];
-          const last = turns[0];
+          // API returns turns oldest-first; the live turn is the last one.
+          const last = turns[turns.length - 1];
           if (!last) continue;
           const status = last.state?.status ?? "unknown";
           const required = last.state?.required_actions ?? [];

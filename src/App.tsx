@@ -260,7 +260,7 @@ function ApprovalCard({
         {a.toolArgs && (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="mt-2 text-[11px] text-ash hover:text-ink transition-colors inline-flex items-center gap-1"
+            className="mt-1.5 -ml-1 inline-flex h-7 items-center gap-1 px-1 text-[11px] text-ash hover:text-ink transition-colors"
           >
             <svg
               width="10"
@@ -754,7 +754,7 @@ export default function App() {
       <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1fr_300px]">
 
         {/* ── approval column ── */}
-        <section className={hasPending ? "pending-orb" : ""}>
+        <section className={`min-w-0 ${hasPending ? "pending-orb" : ""}`}>
           <h2
             className="card-enter mb-2.5 flex items-baseline gap-2 text-[12px] font-medium text-mute tracking-[-0.01em]"
             style={{
@@ -827,7 +827,7 @@ export default function App() {
         </section>
 
         {/* ── sessions rail ── */}
-        <aside>
+        <aside className="min-w-0">
           <h2
             className="card-enter mb-2.5 flex items-baseline gap-2 text-[12px] font-medium text-mute tracking-[-0.01em]"
             style={{
@@ -862,7 +862,7 @@ export default function App() {
 
         {/* ── decision log: full-width row below the grid (judge finding #2) ── */}
         <section
-          className="md:col-span-2"
+          className="min-w-0 md:col-span-2"
           style={{
             opacity: focusMode ? 0.24 : 1,
             transition: "opacity 200ms ease",

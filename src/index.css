@@ -80,6 +80,8 @@
     0 2px 0 #050506;
 }
 .kbd-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; }
+/* interactive keycaps need a real tap target; decorative ones stay 18px */
+button.kbd { height: 26px; padding: 0 10px; font-size: 12px; }
 button.kbd:hover { color: var(--color-ink); border-color: #3a3d3e; }
 .kbd:active {
   transform: translateY(1px);

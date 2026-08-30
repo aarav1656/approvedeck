@@ -181,11 +181,19 @@ function ApprovalCard({
         holdCancel();
       }
     };
+    const onBlur = () => {
+      if (holdKeyActive.current) {
+        holdKeyActive.current = false;
+        holdCancel();
+      }
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
       // If card loses selection while key is held, cancel the hold
       if (holdKeyActive.current) {
         holdKeyActive.current = false;
@@ -557,9 +565,13 @@ export default function App() {
 
   const handleDecide = useCallback(
     async (a: PendingApproval, allow: boolean, reason?: string) => {
-      await decide(a, allow, reason);
-      // Fix 2: clear in-flight after promise settles
-      inFlight.current = false;
+      try {
+        await decide(a, allow, reason);
+      } finally {
+        // Fix 2 + Qodo follow-up: clear in-flight even when the POST fails,
+        // so Enter is never wedged by a failed approval
+        inFlight.current = false;
+      }
       // Advance selection to next card after deciding
       setSelectedId((prev) => {
         const idx = allCards.findIndex((c) => c.toolCallId === prev);

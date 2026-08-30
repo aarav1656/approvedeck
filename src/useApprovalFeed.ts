@@ -48,7 +48,7 @@ interface RawTurn {
 
 // ---------- helpers ----------
 
-function collectToolCalls(events: TurnEvent[]): Map<string, { name: string; args: string }> {
+export function collectToolCalls(events: TurnEvent[]): Map<string, { name: string; args: string }> {
   const calls = new Map<string, { name: string; args: string }>();
   let currentId: string | null = null;
   for (const ev of events) {
@@ -69,7 +69,7 @@ function collectToolCalls(events: TurnEvent[]): Map<string, { name: string; args
   return calls;
 }
 
-function prettyToolTarget(name: string, args: string): { toolName: string; toolArgs: string } {
+export function prettyToolTarget(name: string, args: string): { toolName: string; toolArgs: string } {
   try {
     const parsed = JSON.parse(args);
     if (name === "call_tool" && parsed.tool_name) {

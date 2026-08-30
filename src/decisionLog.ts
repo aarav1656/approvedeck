@@ -5,6 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 
 export const DECISION_LOG_KEY = "approvedeck.decisions.v1";
 
+/** Maximum entries kept in localStorage. Oldest are dropped when exceeded. */
+const MAX_ENTRIES = 500;
+
+/** Custom event name dispatched on the same document after every write. */
+export const DECISION_EVENT = "approvedeck:decision";
+
 export interface DecisionEntry {
   id: string;            // crypto.randomUUID()
   timestamp: string;     // ISO-8601
@@ -34,6 +40,22 @@ export function readLog(): DecisionEntry[] {
   }
 }
 
+/**
+ * Append a decision entry to localStorage, then dispatch a same-document
+ * CustomEvent so same-tab consumers (useDecisionLog) are notified immediately.
+ *
+ * Concurrent-write mitigation: we re-read the freshest array immediately
+ * before writing, minimising (but not eliminating) the race window between
+ * two tabs. Full multi-tab locking (e.g. Web Locks API) is out of scope for
+ * this single-user local tool.
+ *
+ * Growth cap: at most MAX_ENTRIES (500) are retained; excess oldest entries
+ * are dropped before writing.
+ *
+ * Quota handling: if setItem throws (storage full) we retry once after
+ * dropping the oldest half; if still failing we console.warn and return the
+ * entry without persisting.
+ */
 export function appendDecision(entry: Omit<DecisionEntry, "id" | "timestamp">): DecisionEntry {
   const full: DecisionEntry = {
     id: typeof crypto !== "undefined" && crypto.randomUUID
@@ -42,13 +64,41 @@ export function appendDecision(entry: Omit<DecisionEntry, "id" | "timestamp">): 
     timestamp: new Date().toISOString(),
     ...entry,
   };
+
+  // Re-read immediately before write to minimise concurrent-overwrite loss.
   const current = readLog();
   current.push(full);
-  try {
-    localStorage.setItem(DECISION_LOG_KEY, JSON.stringify(current));
-  } catch {
-    // storage full — best-effort
+
+  // Cap to most recent MAX_ENTRIES entries.
+  const capped = current.length > MAX_ENTRIES
+    ? current.slice(current.length - MAX_ENTRIES)
+    : current;
+
+  const persist = (entries: DecisionEntry[]): boolean => {
+    try {
+      localStorage.setItem(DECISION_LOG_KEY, JSON.stringify(entries));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (!persist(capped)) {
+    // Quota exceeded — retry with oldest half dropped.
+    const half = capped.slice(Math.floor(capped.length / 2));
+    if (!persist(half)) {
+      console.warn(
+        "[approvedeck] localStorage quota exceeded — decision entry not persisted:",
+        full.id,
+      );
+    }
   }
+
+  // Notify same-document consumers (StorageEvent only fires in other tabs).
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(DECISION_EVENT, { detail: full }));
+  }
+
   return full;
 }
 
@@ -89,13 +139,20 @@ export function useDecisionLog(): {
     setLog(readLog());
   }, []);
 
-  // Sync when other tabs write to localStorage
   useEffect(() => {
-    const handler = (e: StorageEvent) => {
+    // Cross-tab sync: StorageEvent only fires in tabs OTHER than the writer.
+    const storageHandler = (e: StorageEvent) => {
       if (e.key === DECISION_LOG_KEY) reload();
     };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
+    // Same-tab sync: appendDecision dispatches this custom event after writing.
+    const decisionHandler = () => reload();
+
+    window.addEventListener("storage", storageHandler);
+    window.addEventListener(DECISION_EVENT, decisionHandler);
+    return () => {
+      window.removeEventListener("storage", storageHandler);
+      window.removeEventListener(DECISION_EVENT, decisionHandler);
+    };
   }, [reload]);
 
   const stats = computeStats(log);

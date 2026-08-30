@@ -63,8 +63,8 @@
    "file": "f0006.png",
    "beat": "aim-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -72,8 +72,8 @@
    "file": "f0007.png",
    "beat": "aim-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -81,8 +81,8 @@
    "file": "f0008.png",
    "beat": "aim-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -90,8 +90,8 @@
    "file": "f0009.png",
    "beat": "click-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": true
   },
@@ -99,8 +99,8 @@
    "file": "f0010.png",
    "beat": "click-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -108,8 +108,8 @@
    "file": "f0011.png",
    "beat": "click-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -117,8 +117,8 @@
    "file": "f0012.png",
    "beat": "click-demo",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -126,8 +126,8 @@
    "file": "f0013.png",
    "beat": "cards-in",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -135,8 +135,8 @@
    "file": "f0014.png",
    "beat": "cards-in",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -144,8 +144,8 @@
    "file": "f0015.png",
    "beat": "cards-in",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -153,8 +153,8 @@
    "file": "f0016.png",
    "beat": "cards-in",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -162,8 +162,8 @@
    "file": "f0017.png",
    "beat": "cards-in",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -171,8 +171,8 @@
    "file": "f0018.png",
    "beat": "cards-in",
    "cursor": [
-    1024.74609375,
-    30
+    1016.58203125,
+    32
    ],
    "click": false
   },
@@ -216,8 +216,8 @@
    "file": "f0025.png",
    "beat": "aim-payload",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -225,8 +225,8 @@
    "file": "f0026.png",
    "beat": "aim-payload",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -234,8 +234,8 @@
    "file": "f0027.png",
    "beat": "aim-payload",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -243,8 +243,8 @@
    "file": "f0028.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": true
   },
@@ -252,8 +252,8 @@
    "file": "f0029.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -261,8 +261,8 @@
    "file": "f0030.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -270,8 +270,8 @@
    "file": "f0031.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -279,8 +279,8 @@
    "file": "f0032.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -288,8 +288,8 @@
    "file": "f0033.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -297,8 +297,8 @@
    "file": "f0034.png",
    "beat": "payload-open",
    "cursor": [
-    225.08984375,
-    262.3984375
+    236.37109375,
+    319.875
    ],
    "click": false
   },
@@ -306,8 +306,8 @@
    "file": "f0035.png",
    "beat": "aim-hold",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -315,8 +315,8 @@
    "file": "f0036.png",
    "beat": "aim-hold",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -324,8 +324,8 @@
    "file": "f0037.png",
    "beat": "aim-hold",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -333,8 +333,8 @@
    "file": "f0038.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": true
   },
@@ -342,8 +342,8 @@
    "file": "f0039.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -351,8 +351,8 @@
    "file": "f0040.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -360,8 +360,8 @@
    "file": "f0041.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -369,8 +369,8 @@
    "file": "f0042.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -378,8 +378,8 @@
    "file": "f0043.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -387,8 +387,8 @@
    "file": "f0044.png",
    "beat": "holding",
    "cursor": [
-    654.83203125,
-    481.8984375
+    320,
+    552.375
    ],
    "click": false
   },
@@ -442,97 +442,121 @@
   },
   {
    "file": "f0053.png",
-   "beat": "custody",
-   "cursor": null,
+   "beat": "aim-session",
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0054.png",
-   "beat": "custody",
-   "cursor": null,
+   "beat": "aim-session",
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0055.png",
-   "beat": "custody",
-   "cursor": null,
+   "beat": "aim-session",
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0056.png",
    "beat": "custody",
-   "cursor": null,
-   "click": false
+   "cursor": [
+    978,
+    301.75
+   ],
+   "click": true
   },
   {
    "file": "f0057.png",
    "beat": "custody",
-   "cursor": null,
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0058.png",
    "beat": "custody",
-   "cursor": null,
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0059.png",
    "beat": "custody",
-   "cursor": null,
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0060.png",
    "beat": "custody",
-   "cursor": null,
+   "cursor": [
+    978,
+    301.75
+   ],
    "click": false
   },
   {
    "file": "f0061.png",
-   "beat": "custody",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0062.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0063.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0064.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0065.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0066.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0067.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
   {
    "file": "f0068.png",
-   "beat": "log",
+   "beat": "custody-spine",
    "cursor": null,
    "click": false
   },
@@ -544,6 +568,42 @@
   },
   {
    "file": "f0070.png",
+   "beat": "log",
+   "cursor": null,
+   "click": false
+  },
+  {
+   "file": "f0071.png",
+   "beat": "log",
+   "cursor": null,
+   "click": false
+  },
+  {
+   "file": "f0072.png",
+   "beat": "log",
+   "cursor": null,
+   "click": false
+  },
+  {
+   "file": "f0073.png",
+   "beat": "log",
+   "cursor": null,
+   "click": false
+  },
+  {
+   "file": "f0074.png",
+   "beat": "log",
+   "cursor": null,
+   "click": false
+  },
+  {
+   "file": "f0075.png",
+   "beat": "log",
+   "cursor": null,
+   "click": false
+  },
+  {
+   "file": "f0076.png",
    "beat": "log",
    "cursor": null,
    "click": false

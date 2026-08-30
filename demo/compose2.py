@@ -81,17 +81,26 @@ def draw_cursor(img, x, y):
 
 
 def draw_ripple(img, x, y, step):
-    """Expanding translucent ring, step 0..RIPPLE_FRAMES-1."""
+    """Expanding translucent ring, step 0..RIPPLE_FRAMES-1.
+
+    Fill first, ring second: painting the fill after the outline erases the
+    ring, which is what made the first cut's ripple read as a flat smudge.
+    """
     frac = (step + 1) / float(RIPPLE_FRAMES)
-    r = int(18 + 46 * frac)
-    alpha = int(200 * (1 - frac))
-    if alpha <= 0:
+    r = int(22 + 62 * frac)
+    fade = 1 - frac
+    ring_a = int(255 * max(fade, 0.25))
+    if ring_a <= 0:
         return
     ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)
-    d.ellipse([x - r, y - r, x + r, y + r],
-              outline=(255, 255, 255, alpha), width=max(3, int(7 * (1 - frac)) + 3))
-    d.ellipse([x - r, y - r, x + r, y + r], fill=(120, 180, 255, int(alpha * 0.18)))
+    box = [x - r, y - r, x + r, y + r]
+    d.ellipse(box, fill=(130, 190, 255, int(90 * fade)))
+    d.ellipse(box, outline=(255, 255, 255, ring_a), width=max(4, int(9 * fade)))
+    # a second, tighter ring gives the wipe a readable leading edge
+    r2 = int(r * 0.62)
+    d.ellipse([x - r2, y - r2, x + r2, y + r2],
+              outline=(190, 220, 255, int(ring_a * 0.7)), width=3)
     img.alpha_composite(ov)
 
 

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type PendingApproval, type SessionActivity, useApprovalFeed } from "./useApprovalFeed";
+import { useHoldToArm } from "./useHoldToArm";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -14,6 +15,11 @@ function timeAgo(iso: string): string {
 function tokenRatio(tokens: number, softMax = 80_000): number {
   return Math.min(tokens / softMax, 1);
 }
+
+const DESTRUCTIVE_RE = /execute|delete|drop|truncate|write/i;
+
+const DENY_CHIPS = ["wrong env", "too broad", "needs human", "policy"] as const;
+type DenyChip = (typeof DENY_CHIPS)[number];
 
 // ─── StatusPill ───────────────────────────────────────────────────────────────
 
@@ -60,17 +66,14 @@ function EmptyState() {
     <div className="rounded-xl bg-surface hairline px-6 py-14 text-center overflow-hidden">
       {/* animated rings + shield icon */}
       <div className="relative mx-auto mb-6 flex h-16 w-16 items-center justify-center">
-        {/* outer ring */}
         <span
           className="ring-pulse absolute inset-0 rounded-full border border-accent-green/30"
           aria-hidden
         />
-        {/* inner ring delayed */}
         <span
           className="ring-pulse ring-pulse-delay absolute inset-0 rounded-full border border-accent-green/20"
           aria-hidden
         />
-        {/* icon container */}
         <span className="shield-enter relative flex h-16 w-16 items-center justify-center rounded-full bg-accent-green/10 border border-accent-green/25">
           <svg
             width="28"
@@ -111,27 +114,89 @@ function ApprovalCard({
   a,
   onDecide,
   enterDelay,
+  selected,
+  inFocusMode,
+  onSelect,
+  forceExpand,
 }: {
   a: PendingApproval;
-  onDecide: (a: PendingApproval, allow: boolean) => Promise<void>;
+  onDecide: (a: PendingApproval, allow: boolean, reason?: string) => Promise<void>;
   enterDelay: number;
+  selected: boolean;
+  inFocusMode: boolean;
+  onSelect: () => void;
+  forceExpand: boolean;
 }) {
   const [busy, setBusy] = useState<"allow" | "deny" | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const act = async (allow: boolean) => {
-    setBusy(allow ? "allow" : "deny");
+  const [denyOpen, setDenyOpen] = useState(false);
+  const [denyChip, setDenyChip] = useState<DenyChip | null>(null);
+  const [denyFreeText, setDenyFreeText] = useState("");
+
+  const destructive = DESTRUCTIVE_RE.test(a.toolName);
+
+  // Hold-to-arm — only active for destructive cards
+  const { progress: holdProgress, start: holdStart, cancel: holdCancel } = useHoldToArm(
+    useCallback(async () => {
+      setBusy("allow");
+      try {
+        await onDecide(a, true);
+      } finally {
+        setBusy(null);
+      }
+    }, [a, onDecide]),
+  );
+
+  const isExpanded = expanded || forceExpand;
+
+  const actAllow = async () => {
+    if (destructive) return; // destructive requires hold-to-arm
+    setBusy("allow");
     try {
-      await onDecide(a, allow);
+      await onDecide(a, true);
     } finally {
       setBusy(null);
     }
   };
-  const destructive = /execute|delete|drop|truncate|write/i.test(a.toolName);
+
+  const actDeny = async () => {
+    const reason = denyChip
+      ? denyFreeText ? `${denyChip}: ${denyFreeText}` : denyChip
+      : denyFreeText || undefined;
+    if (destructive && !reason) return; // reason required for destructive
+    setBusy("deny");
+    setDenyOpen(false);
+    try {
+      await onDecide(a, false, reason);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openDeny = () => {
+    setDenyOpen(true);
+    setDenyChip(null);
+    setDenyFreeText("");
+  };
+
+  const denyReady = !destructive || !!denyChip || !!denyFreeText.trim();
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
-      className={`card-enter card-hover rounded-xl bg-card hairline p-5 ${destructive ? "glow-red" : ""}`}
-      style={{ "--enter-delay": `${enterDelay}ms` } as React.CSSProperties}
+      onClick={onSelect}
+      data-card-id={a.toolCallId}
+      className={[
+        "card-enter card-hover rounded-xl bg-card hairline p-5 cursor-pointer",
+        destructive ? "glow-red" : "",
+        selected ? "ring-2 ring-accent-blue/60 ring-offset-2 ring-offset-canvas" : "",
+        inFocusMode && !selected ? "opacity-24 pointer-events-none" : "",
+      ].join(" ")}
+      style={{
+        "--enter-delay": `${enterDelay}ms`,
+        ...(inFocusMode && selected ? { maxWidth: "560px", margin: "0 auto" } : {}),
+        transition: "opacity 200ms ease",
+      } as React.CSSProperties}
     >
       {/* card header */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -142,6 +207,15 @@ function ApprovalCard({
         <span className="text-ash text-[13px] truncate min-w-0">{a.sessionTitle}</span>
         <span className="ml-auto text-ash text-[12px] shrink-0 tabular-nums">{timeAgo(a.since)}</span>
       </div>
+
+      {/* destructive badge */}
+      {destructive && (
+        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-accent-red/10 border border-accent-red/25 px-2.5 py-0.5">
+          <span className="text-accent-red text-[11px] font-semibold uppercase tracking-wider">
+            ⚠ Hold to approve
+          </span>
+        </div>
+      )}
 
       {/* tool block */}
       <div className="mt-4 rounded-lg bg-elevated hairline px-4 py-3">
@@ -156,7 +230,7 @@ function ApprovalCard({
         )}
         {a.toolArgs && (
           <button
-            onClick={() => setExpanded(!expanded)}
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
             className="mt-2 text-[12px] text-accent-blue hover:text-accent-blue/80 transition-colors inline-flex items-center gap-1"
           >
             <svg
@@ -164,39 +238,110 @@ function ApprovalCard({
               height="10"
               viewBox="0 0 10 10"
               fill="none"
-              className={`transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+              className={`transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
             >
               <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {expanded ? "hide payload" : "show payload"}
+            {isExpanded ? "hide payload" : "show payload"}
           </button>
         )}
-        {expanded && (
+        {isExpanded && (
           <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-canvas border border-hairline p-3 text-[12px] leading-relaxed text-body whitespace-pre-wrap break-all expand-pre">
             {a.toolArgs}
           </pre>
         )}
       </div>
 
-      {/* actions */}
-      {a.kind === "approval" ? (
-        <div className="mt-4 flex gap-3">
+      {/* deny chip strip */}
+      {denyOpen && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+        <div className="mt-3 flex flex-wrap gap-2 items-center" onClick={(e) => e.stopPropagation()}>
+          {DENY_CHIPS.map((chip) => (
+            <button
+              key={chip}
+              onClick={() => setDenyChip(denyChip === chip ? null : chip)}
+              className={[
+                "h-8 rounded-full border px-3 text-[12px] font-medium transition-colors",
+                denyChip === chip
+                  ? "bg-accent-red/20 border-accent-red/50 text-accent-red"
+                  : "bg-elevated border-hairline text-ash hover:border-accent-red/40 hover:text-body",
+              ].join(" ")}
+            >
+              {chip}
+            </button>
+          ))}
+          <input
+            type="text"
+            placeholder="other reason…"
+            value={denyFreeText}
+            onChange={(e) => setDenyFreeText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && denyReady) { e.preventDefault(); void actDeny(); }
+              if (e.key === "Escape") { e.stopPropagation(); setDenyOpen(false); }
+            }}
+            className="h-8 min-w-0 flex-1 rounded-full border border-hairline bg-elevated px-3 text-[12px] text-body placeholder:text-ash/50 outline-none focus:border-accent-red/40"
+          />
           <button
-            disabled={busy !== null}
-            onClick={() => act(true)}
-            className="btn-approve flex-1 rounded-lg bg-accent-green/12 text-accent-green border border-accent-green/30 py-2.5 text-[14px] font-medium hover:bg-accent-green/22 hover:border-accent-green/50 disabled:opacity-40 transition-colors"
+            disabled={!denyReady || busy !== null}
+            onClick={actDeny}
+            className="h-8 rounded-full bg-accent-red/15 border border-accent-red/35 px-4 text-[12px] font-medium text-accent-red hover:bg-accent-red/25 disabled:opacity-40 transition-colors"
           >
-            {busy === "allow" ? (
-              <span className="inline-flex items-center gap-2">
-                <SpinnerIcon /> Approving…
-              </span>
-            ) : (
-              "Approve"
-            )}
+            {destructive && !denyReady ? "reason required" : "Confirm deny"}
           </button>
+        </div>
+      )}
+
+      {/* actions */}
+      {a.kind === "approval" && !denyOpen && (
+        <div className="mt-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
+          {/* Approve — hold-to-arm for destructive */}
+          {destructive ? (
+            <div className="relative flex-1 overflow-hidden rounded-lg">
+              {/* fill bar */}
+              <div
+                className="pointer-events-none absolute inset-0 rounded-lg"
+                style={{
+                  background: `rgba(255,97,97,0.4)`,
+                  width: `${holdProgress * 100}%`,
+                  transition: holdProgress === 0 ? `width ${120}ms ease` : undefined,
+                }}
+              />
+              <button
+                disabled={busy !== null}
+                onMouseDown={holdStart}
+                onMouseUp={holdCancel}
+                onMouseLeave={holdCancel}
+                onTouchStart={holdStart}
+                onTouchEnd={holdCancel}
+                className="btn-approve relative w-full rounded-lg bg-accent-red/10 text-accent-red border border-accent-red/30 py-2.5 text-[14px] font-medium hover:bg-accent-red/18 hover:border-accent-red/50 disabled:opacity-40 select-none"
+              >
+                {busy === "allow" ? (
+                  <span className="inline-flex items-center gap-2">
+                    <SpinnerIcon /> Approving…
+                  </span>
+                ) : (
+                  "Hold to Approve"
+                )}
+              </button>
+            </div>
+          ) : (
+            <button
+              disabled={busy !== null}
+              onClick={actAllow}
+              className="btn-approve flex-1 rounded-lg bg-accent-green/12 text-accent-green border border-accent-green/30 py-2.5 text-[14px] font-medium hover:bg-accent-green/22 hover:border-accent-green/50 disabled:opacity-40 transition-colors"
+            >
+              {busy === "allow" ? (
+                <span className="inline-flex items-center gap-2">
+                  <SpinnerIcon /> Approving…
+                </span>
+              ) : (
+                "Approve"
+              )}
+            </button>
+          )}
           <button
             disabled={busy !== null}
-            onClick={() => act(false)}
+            onClick={openDeny}
             className="btn-deny flex-1 rounded-lg bg-accent-red/12 text-accent-red border border-accent-red/25 py-2.5 text-[14px] font-medium hover:bg-accent-red/22 hover:border-accent-red/45 disabled:opacity-40 transition-colors"
           >
             {busy === "deny" ? (
@@ -208,7 +353,8 @@ function ApprovalCard({
             )}
           </button>
         </div>
-      ) : (
+      )}
+      {a.kind === "question" && (
         <div className="mt-3 text-[13px] text-ash leading-relaxed">
           Answer this question in TrueForge — questions carry free-form context.
         </div>
@@ -233,7 +379,7 @@ const statusTokenColor: Record<SessionActivity["status"], string> = {
   error: "token-fill-idle",
 };
 
-function ActivityRow({ act, enterDelay }: { act: SessionActivity; enterDelay: number }) {
+function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterDelay: number; dimmed: boolean }) {
   const m = act.metrics;
   const totalTok = m.total_tokens ?? 0;
   const ratio = tokenRatio(totalTok);
@@ -242,12 +388,19 @@ function ActivityRow({ act, enterDelay }: { act: SessionActivity; enterDelay: nu
   return (
     <div
       className="card-enter flex items-center gap-3 rounded-lg bg-surface hairline px-4 py-3 transition-colors hover:bg-elevated"
-      style={{ "--enter-delay": `${enterDelay}ms` } as React.CSSProperties}
+      style={{
+        "--enter-delay": `${enterDelay}ms`,
+        opacity: dimmed ? 0.24 : 1,
+        transition: "opacity 200ms ease",
+      } as React.CSSProperties}
     >
       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot[act.status]}`} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] text-ink font-medium">{label}</div>
+<<<<<<< Updated upstream
         {/* sparkline token bar */}
+=======
+>>>>>>> Stashed changes
         {totalTok > 0 && (
           <div className="mt-1.5 flex items-center gap-2">
             <div className="token-track">
@@ -328,10 +481,100 @@ export default function App() {
   const questions = approvals.filter((a) => a.kind === "question");
   const hasPending = waiting.length > 0;
 
+  // Keyboard queue state
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [denyTriggeredId, setDenyTriggeredId] = useState<string | null>(null);
+
+  const allCards = waiting; // only approval cards are in the keyboard queue
+  const selectedIdx = allCards.findIndex((a) => a.toolCallId === selectedId);
+  const selectedCard = selectedIdx >= 0 ? allCards[selectedIdx] : null;
+  const focusMode = selectedCard !== null && DESTRUCTIVE_RE.test(selectedCard.toolName);
+
+  // Keep selection valid when cards are removed
+  useEffect(() => {
+    if (selectedId && !allCards.find((a) => a.toolCallId === selectedId)) {
+      setSelectedId(allCards[0]?.toolCallId ?? null);
+    }
+  }, [allCards, selectedId]);
+
+  const handleDecide = useCallback(
+    async (a: PendingApproval, allow: boolean, reason?: string) => {
+      await decide(a, allow, reason);
+      // Advance selection to next card after deciding
+      setSelectedId((prev) => {
+        const idx = allCards.findIndex((c) => c.toolCallId === prev);
+        const next = allCards[idx + 1] ?? allCards[idx - 1] ?? null;
+        return next?.toolCallId ?? null;
+      });
+    },
+    [decide, allCards],
+  );
+
+  // Scroll selected card into view
+  const selectedRef = useRef<string | null>(null);
+  selectedRef.current = selectedId;
+  useEffect(() => {
+    if (!selectedId) return;
+    const el = document.querySelector(`[data-card-id="${selectedId}"]`);
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedId]);
+
+  // Global keyboard handler
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore if focus is in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setDenyTriggeredId(null);
+        setSelectedId((prev) => {
+          if (allCards.length === 0) return null;
+          const idx = allCards.findIndex((a) => a.toolCallId === prev);
+          return allCards[Math.min(idx + 1, allCards.length - 1)].toolCallId;
+        });
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setDenyTriggeredId(null);
+        setSelectedId((prev) => {
+          if (allCards.length === 0) return null;
+          const idx = allCards.findIndex((a) => a.toolCallId === prev);
+          return allCards[Math.max(idx - 1, 0)].toolCallId;
+        });
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setSelectedId(null);
+        setDenyTriggeredId(null);
+      } else if (e.key === "Enter") {
+        const sel = allCards.find((a) => a.toolCallId === selectedRef.current);
+        if (!sel) return;
+        const isDestructive = DESTRUCTIVE_RE.test(sel.toolName);
+        if (!isDestructive) {
+          e.preventDefault();
+          void handleDecide(sel, true);
+        }
+        // destructive: Enter triggers hold via the button's keydown
+      } else if (e.key === "d") {
+        if (!selectedRef.current) return;
+        e.preventDefault();
+        setDenyTriggeredId(selectedRef.current);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [allCards, handleDecide]);
+
   return (
     <div className="min-h-screen bg-canvas font-sans">
       {/* ── header ── */}
-      <header className="header-enter sticky top-0 z-10 border-b border-hairline bg-canvas/90 backdrop-blur-md">
+      <header
+        className="header-enter sticky top-0 z-10 border-b border-hairline bg-canvas/90 backdrop-blur-md"
+        style={{
+          opacity: focusMode ? 0.24 : 1,
+          transition: "opacity 200ms ease",
+        }}
+      >
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-6 py-4">
           {/* logo mark */}
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent-red/15 text-accent-red text-[15px] border border-accent-red/20">
@@ -342,7 +585,6 @@ export default function App() {
           </div>
           <h1 className="text-ink text-[17px] font-semibold tracking-tight">ApproveDeck</h1>
           <span className="hidden sm:block text-ash text-[13px]">mission control</span>
-          {/* status pill — right-aligned, wraps below on 390 */}
           <div className="ml-auto flex items-center gap-3 flex-wrap justify-end">
             <StatusPill waiting={waiting.length} error={error} lastPoll={lastPoll} />
             <button
@@ -355,13 +597,37 @@ export default function App() {
         </div>
       </header>
 
+      {/* keyboard hint bar */}
+      {allCards.length > 0 && (
+        <div
+          className="mx-auto max-w-5xl px-4 sm:px-6 pt-3"
+          style={{
+            opacity: focusMode ? 0.24 : 1,
+            transition: "opacity 200ms ease",
+          }}
+        >
+          <div className="flex items-center gap-3 text-[11px] text-ash/60 font-mono">
+            <span><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">j/k</kbd> navigate</span>
+            <span><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">↵</kbd> approve</span>
+            <span><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">d</kbd> deny</span>
+            <span><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">esc</kbd> clear</span>
+          </div>
+        </div>
+      )}
+
       {/* ── main ── */}
       <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1fr_300px]">
 
         {/* ── approval column ── */}
         <section className={hasPending ? "pending-orb" : ""}>
-          <h2 className="card-enter mb-4 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
-              style={{ "--enter-delay": "40ms" } as React.CSSProperties}>
+          <h2
+            className="card-enter mb-4 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
+            style={{
+              "--enter-delay": "40ms",
+              opacity: focusMode ? 0.24 : 1,
+              transition: "opacity 200ms ease",
+            } as React.CSSProperties}
+          >
             Needs a human
             <span className="ml-2 tabular-nums font-mono text-ash">{waiting.length}</span>
           </h2>
@@ -370,21 +636,38 @@ export default function App() {
             <EmptyState />
           ) : (
             <div className="flex flex-col gap-4">
-              {waiting.map((a, i) => (
-                <ApprovalCard
-                  key={a.toolCallId}
-                  a={a}
-                  onDecide={decide}
-                  enterDelay={80 + i * 60}
-                />
-              ))}
+              {waiting.map((a, i) => {
+                const isSelected = a.toolCallId === selectedId;
+                const isDestructive = DESTRUCTIVE_RE.test(a.toolName);
+                return (
+                  <ApprovalCard
+                    key={a.toolCallId}
+                    a={a}
+                    onDecide={handleDecide}
+                    enterDelay={80 + i * 60}
+                    selected={isSelected}
+                    inFocusMode={focusMode && !isSelected}
+                    onSelect={() => {
+                      setSelectedId(a.toolCallId);
+                      setDenyTriggeredId(null);
+                    }}
+                    forceExpand={(focusMode && isSelected && isDestructive) || denyTriggeredId === a.toolCallId}
+                  />
+                );
+              })}
             </div>
           )}
 
           {questions.length > 0 && (
             <>
-              <h2 className="card-enter mb-4 mt-10 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
-                  style={{ "--enter-delay": "120ms" } as React.CSSProperties}>
+              <h2
+                className="card-enter mb-4 mt-10 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
+                style={{
+                  "--enter-delay": "120ms",
+                  opacity: focusMode ? 0.24 : 1,
+                  transition: "opacity 200ms ease",
+                } as React.CSSProperties}
+              >
                 Open questions
                 <span className="ml-2 tabular-nums font-mono text-ash">{questions.length}</span>
               </h2>
@@ -393,8 +676,12 @@ export default function App() {
                   <ApprovalCard
                     key={a.toolCallId}
                     a={a}
-                    onDecide={decide}
+                    onDecide={handleDecide}
                     enterDelay={120 + i * 60}
+                    selected={false}
+                    inFocusMode={focusMode}
+                    onSelect={() => {}}
+                    forceExpand={false}
                   />
                 ))}
               </div>
@@ -404,18 +691,30 @@ export default function App() {
 
         {/* ── sessions rail ── */}
         <aside>
-          <h2 className="card-enter mb-4 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
-              style={{ "--enter-delay": "60ms" } as React.CSSProperties}>
+          <h2
+            className="card-enter mb-4 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
+            style={{
+              "--enter-delay": "60ms",
+              opacity: focusMode ? 0.24 : 1,
+              transition: "opacity 200ms ease",
+            } as React.CSSProperties}
+          >
             Agent sessions
             <span className="ml-2 tabular-nums font-mono text-ash">{activity.length}</span>
           </h2>
           <div className="flex flex-col gap-2">
             {activity.map((act, i) => (
-              <ActivityRow key={act.session.id} act={act} enterDelay={100 + i * 40} />
+              <ActivityRow key={act.session.id} act={act} enterDelay={100 + i * 40} dimmed={focusMode} />
             ))}
             {activity.length === 0 && !error && (
-              <div className="card-enter rounded-lg bg-surface hairline px-4 py-6 text-center"
-                   style={{ "--enter-delay": "120ms" } as React.CSSProperties}>
+              <div
+                className="card-enter rounded-lg bg-surface hairline px-4 py-6 text-center"
+                style={{
+                  "--enter-delay": "120ms",
+                  opacity: focusMode ? 0.24 : 1,
+                  transition: "opacity 200ms ease",
+                } as React.CSSProperties}
+              >
                 <div className="text-[13px] text-ash">No active sessions</div>
                 <div className="mt-1 text-[12px] text-ash/60">Start a TrueForge agent to see activity here.</div>
               </div>

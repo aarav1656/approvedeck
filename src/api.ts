@@ -66,6 +66,7 @@ export async function sendApproval(
   threadId: string,
   toolCallId: string,
   allow: boolean,
+  reason?: string,
 ): Promise<void> {
   const res = await fetch(`/api/v1/sessions/${sessionId}/turns`, {
     method: "POST",
@@ -76,7 +77,9 @@ export async function sendApproval(
           type: "user.tool_approval",
           thread_id: threadId,
           tool_call_id: toolCallId,
-          approval: allow ? { status: "allow" } : { status: "deny", reason: "Denied from ApproveDeck" },
+          approval: allow
+            ? { status: "allow" }
+            : { status: "deny", reason: reason ?? "Denied from ApproveDeck" },
         },
       ],
       stream: false,

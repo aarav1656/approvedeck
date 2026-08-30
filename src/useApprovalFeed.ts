@@ -191,8 +191,8 @@ export function useApprovalFeed(pollMs = 4000) {
   }, [refresh, pollMs]);
 
   const decide = useCallback(
-    async (a: PendingApproval, allow: boolean) => {
-      await sendApproval(a.sessionId, a.threadId, a.toolCallId, allow);
+    async (a: PendingApproval, allow: boolean, reason?: string) => {
+      await sendApproval(a.sessionId, a.threadId, a.toolCallId, allow, reason);
       setApprovals((prev) => prev.filter((p) => p.toolCallId !== a.toolCallId));
       setTimeout(refresh, 1500);
     },

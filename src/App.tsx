@@ -322,10 +322,19 @@ function ApprovalCard({
 
       {/* actions */}
       {a.kind === "approval" && !denyOpen && (
-        <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          {selected && (
+            <span className="mr-auto hidden items-center gap-1.5 text-[11px] text-ash sm:flex">
+              {destructive ? (
+                <>hold <kbd className="kbd">↵</kbd> to approve</>
+              ) : (
+                <><kbd className="kbd">↵</kbd> approve<span className="px-1 text-ash/40">·</span><kbd className="kbd">d</kbd> deny</>
+              )}
+            </span>
+          )}
           {/* Approve — hold-to-arm for destructive */}
           {destructive ? (
-            <div className="relative flex-1 overflow-hidden rounded-[6px]">
+            <div className="relative overflow-hidden rounded-[6px]">
               {/* fill bar */}
               <div
                 className="pointer-events-none absolute inset-y-0 left-0"
@@ -343,7 +352,7 @@ function ApprovalCard({
                 onTouchStart={holdStart}
                 onTouchEnd={holdCancel}
                 onTouchCancel={holdCancel}  /* Fix 5: cancelled touches release the hold */
-                className="btn-approve relative w-full rounded-[6px] bg-accent-red/10 text-accent-red ring-1 ring-inset ring-accent-red/30 py-2 text-[13px] font-medium hover:bg-accent-red/18 disabled:opacity-40 select-none"
+                className="btn-approve relative w-full rounded-[6px] bg-accent-red/10 text-accent-red ring-1 ring-inset ring-accent-red/30 px-3.5 py-1.5 text-[12px] font-medium hover:bg-accent-red/18 disabled:opacity-40 select-none"
               >
                 {busy === "allow" ? (
                   <span className="inline-flex items-center gap-2">
@@ -358,7 +367,7 @@ function ApprovalCard({
             <button
               disabled={busy !== null}
               onClick={actAllow}
-              className="btn-approve flex-1 rounded-[6px] bg-accent-green/12 text-accent-green py-2 text-[13px] font-medium hover:bg-accent-green/22 disabled:opacity-40 transition-colors shadow-[0_0_0_1px_rgba(89,212,153,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+              className="btn-approve rounded-[6px] bg-accent-green/12 text-accent-green px-3.5 py-1.5 text-[12px] font-medium hover:bg-accent-green/22 disabled:opacity-40 transition-colors shadow-[0_0_0_1px_rgba(89,212,153,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
             >
               {busy === "allow" ? (
                 <span className="inline-flex items-center gap-2">
@@ -372,7 +381,7 @@ function ApprovalCard({
           <button
             disabled={busy !== null}
             onClick={openDeny}
-            className="btn-deny flex-1 rounded-[6px] bg-accent-red/10 text-accent-red ring-1 ring-inset ring-accent-red/25 py-2 text-[13px] font-medium hover:bg-accent-red/20 disabled:opacity-40 transition-colors"
+            className="btn-deny rounded-[6px] bg-accent-red/10 text-accent-red ring-1 ring-inset ring-accent-red/25 px-3.5 py-1.5 text-[12px] font-medium hover:bg-accent-red/20 disabled:opacity-40 transition-colors"
           >
             {busy === "deny" ? (
               <span className="inline-flex items-center gap-2">
@@ -382,9 +391,6 @@ function ApprovalCard({
               "Deny"
             )}
           </button>
-          {selected && !destructive && (
-            <kbd className="kbd hidden sm:inline-flex shrink-0" aria-hidden>↵</kbd>
-          )}
         </div>
       )}
       {a.kind === "question" && (

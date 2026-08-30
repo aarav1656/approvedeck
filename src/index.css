@@ -27,9 +27,6 @@
   button, [role="button"] { cursor: pointer; }
 }
 
-/* ─── borders ─────────────────────────────────────────────── */
-.hairline { border: 1px solid var(--color-hairline); }
-
 /* ─── the well: one chassis, rows inside it ────────────────
    Depth lives here, not on N identical tiles. Inset top highlight
    + 1px ring + a hard bottom shadow reads as etched into the canvas. */

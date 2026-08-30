@@ -580,7 +580,6 @@ export default function App() {
     useApprovalFeed();
   const waiting = approvals.filter((a) => a.kind === "approval");
   const questions = approvals.filter((a) => a.kind === "question");
-  const hasPending = waiting.length > 0;
 
   // Keyboard queue state
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -754,7 +753,7 @@ export default function App() {
       <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[1fr_300px]">
 
         {/* ── approval column ── */}
-        <section className={`min-w-0 ${hasPending ? "pending-orb" : ""}`}>
+        <section className="min-w-0">
           <h2
             className="card-enter mb-2.5 flex items-baseline gap-2 text-[12px] font-medium text-mute tracking-[-0.01em]"
             style={{

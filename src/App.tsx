@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type PendingApproval, type SessionActivity, useApprovalFeed } from "./useApprovalFeed";
+import { useDecisionLog } from "./decisionLog";
 import { useHoldToArm } from "./useHoldToArm";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -530,6 +531,59 @@ function ErrorBanner() {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
+
+function timeShort(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function DecisionPanel() {
+  const { log, stats } = useDecisionLog();
+  const recent = [...log].slice(-6).reverse();
+  return (
+    <div className="mt-8">
+      <h2 className="mb-3 text-[13px] font-medium uppercase tracking-wider text-ash">
+        Decision log
+        <span className="ml-2 font-mono tabular-nums opacity-60">{log.length}</span>
+      </h2>
+      <div className="rounded-lg bg-surface hairline p-4">
+        <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-[18px] font-semibold text-accent-green tabular-nums">{stats.totalApproved}</div>
+            <div className="text-[11px] text-ash uppercase tracking-wider">approved</div>
+          </div>
+          <div>
+            <div className="text-[18px] font-semibold text-accent-red tabular-nums">{stats.totalDenied}</div>
+            <div className="text-[11px] text-ash uppercase tracking-wider">denied</div>
+          </div>
+          <div>
+            <div className="text-[18px] font-semibold text-ink tabular-nums">
+              {stats.medianResponseMs != null ? `${(stats.medianResponseMs / 1000).toFixed(1)}s` : "–"}
+            </div>
+            <div className="text-[11px] text-ash uppercase tracking-wider">median response</div>
+          </div>
+        </div>
+        {recent.length > 0 ? (
+          <div className="flex flex-col gap-1.5 border-t border-hairline pt-3">
+            {recent.map((d) => (
+              <div key={d.id} className="flex items-center gap-2 text-[12px]">
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${d.decision === "approve" ? "bg-accent-green" : "bg-accent-red"}`} />
+                <span className="truncate font-mono text-body flex-1">{d.toolName.split(" ")[0]}</span>
+                <span className="text-ash shrink-0">{(d.latencyMs / 1000).toFixed(0)}s wait</span>
+                <span className="text-ash shrink-0 tabular-nums">{timeShort(d.timestamp)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="border-t border-hairline pt-3 text-[12px] text-ash">
+            Decisions you make here appear with response-time stats.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const { approvals, activity, error, lastPoll, decide, refresh } = useApprovalFeed();
   const waiting = approvals.filter((a) => a.kind === "approval");
@@ -803,6 +857,7 @@ export default function App() {
             )}
             {error && <ErrorBanner />}
           </div>
+                  <DecisionPanel />
         </aside>
       </main>
     </div>

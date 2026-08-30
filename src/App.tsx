@@ -16,7 +16,8 @@ function tokenRatio(tokens: number, softMax = 80_000): number {
   return Math.min(tokens / softMax, 1);
 }
 
-const DESTRUCTIVE_RE = /execute|delete|drop|truncate|write/i;
+// Fix 1: add "exec" so the harness "exec" tool requires hold-to-arm
+const DESTRUCTIVE_RE = /execute|exec|delete|drop|truncate|write/i;
 
 const DENY_CHIPS = ["wrong env", "too broad", "needs human", "policy"] as const;
 type DenyChip = (typeof DENY_CHIPS)[number];
@@ -118,6 +119,7 @@ function ApprovalCard({
   inFocusMode,
   onSelect,
   forceExpand,
+  denyRequestId,
 }: {
   a: PendingApproval;
   onDecide: (a: PendingApproval, allow: boolean, reason?: string) => Promise<void>;
@@ -126,6 +128,8 @@ function ApprovalCard({
   inFocusMode: boolean;
   onSelect: () => void;
   forceExpand: boolean;
+  // Fix 3: increments each time the global 'd' shortcut targets this card
+  denyRequestId: number;
 }) {
   const [busy, setBusy] = useState<"allow" | "deny" | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -146,6 +150,49 @@ function ApprovalCard({
       }
     }, [a, onDecide]),
   );
+
+  // Fix 3: open deny strip when denyRequestId increments (non-zero, new value)
+  const prevDenyRequestId = useRef(0);
+  useEffect(() => {
+    if (denyRequestId !== 0 && denyRequestId !== prevDenyRequestId.current) {
+      prevDenyRequestId.current = denyRequestId;
+      openDeny();
+    }
+  // openDeny is stable (defined below), safe to omit from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [denyRequestId]);
+
+  // Fix 4: keyboard hold-to-arm for selected destructive card
+  // keydown Enter (non-repeat) starts the hold; keyup Enter cancels/completes per controller
+  const holdKeyActive = useRef(false);
+  useEffect(() => {
+    if (!selected || !destructive) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.key === "Enter" && !e.repeat && !holdKeyActive.current) {
+        holdKeyActive.current = true;
+        holdStart();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && holdKeyActive.current) {
+        holdKeyActive.current = false;
+        holdCancel();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      // If card loses selection while key is held, cancel the hold
+      if (holdKeyActive.current) {
+        holdKeyActive.current = false;
+        holdCancel();
+      }
+    };
+  }, [selected, destructive, holdStart, holdCancel]);
 
   const isExpanded = expanded || forceExpand;
 
@@ -313,6 +360,7 @@ function ApprovalCard({
                 onMouseLeave={holdCancel}
                 onTouchStart={holdStart}
                 onTouchEnd={holdCancel}
+                onTouchCancel={holdCancel}  /* Fix 5: cancelled touches release the hold */
                 className="btn-approve relative w-full rounded-lg bg-accent-red/10 text-accent-red border border-accent-red/30 py-2.5 text-[14px] font-medium hover:bg-accent-red/18 hover:border-accent-red/50 disabled:opacity-40 select-none"
               >
                 {busy === "allow" ? (
@@ -482,7 +530,11 @@ export default function App() {
 
   // Keyboard queue state
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [denyTriggeredId, setDenyTriggeredId] = useState<string | null>(null);
+  // Fix 3: counter-based deny request — increment seq to open deny strip on the matching card
+  const [denyRequest, setDenyRequest] = useState<{ id: string; seq: number } | null>(null);
+
+  // Fix 2: in-flight guard prevents duplicate approvals from Enter auto-repeat
+  const inFlight = useRef(false);
 
   const allCards = waiting; // only approval cards are in the keyboard queue
   const selectedIdx = allCards.findIndex((a) => a.toolCallId === selectedId);
@@ -496,9 +548,18 @@ export default function App() {
     }
   }, [allCards, selectedId]);
 
+  // Fix 6: auto-select first card when pending cards arrive and selection is null
+  useEffect(() => {
+    if (selectedId === null && allCards.length > 0) {
+      setSelectedId(allCards[0].toolCallId);
+    }
+  }, [allCards, selectedId]);
+
   const handleDecide = useCallback(
     async (a: PendingApproval, allow: boolean, reason?: string) => {
       await decide(a, allow, reason);
+      // Fix 2: clear in-flight after promise settles
+      inFlight.current = false;
       // Advance selection to next card after deciding
       setSelectedId((prev) => {
         const idx = allCards.findIndex((c) => c.toolCallId === prev);
@@ -527,7 +588,7 @@ export default function App() {
 
       if (e.key === "j" || e.key === "ArrowDown") {
         e.preventDefault();
-        setDenyTriggeredId(null);
+        setDenyRequest(null);
         setSelectedId((prev) => {
           if (allCards.length === 0) return null;
           const idx = allCards.findIndex((a) => a.toolCallId === prev);
@@ -535,7 +596,7 @@ export default function App() {
         });
       } else if (e.key === "k" || e.key === "ArrowUp") {
         e.preventDefault();
-        setDenyTriggeredId(null);
+        setDenyRequest(null);
         setSelectedId((prev) => {
           if (allCards.length === 0) return null;
           const idx = allCards.findIndex((a) => a.toolCallId === prev);
@@ -544,20 +605,28 @@ export default function App() {
       } else if (e.key === "Escape") {
         e.preventDefault();
         setSelectedId(null);
-        setDenyTriggeredId(null);
+        setDenyRequest(null);
       } else if (e.key === "Enter") {
+        // Fix 2: guard with e.repeat AND in-flight ref
+        if (e.repeat) return;
         const sel = allCards.find((a) => a.toolCallId === selectedRef.current);
         if (!sel) return;
         const isDestructive = DESTRUCTIVE_RE.test(sel.toolName);
         if (!isDestructive) {
+          if (inFlight.current) return;
+          inFlight.current = true;
           e.preventDefault();
           void handleDecide(sel, true);
         }
-        // destructive: Enter triggers hold via the button's keydown
+        // Fix 4: destructive cards handle Enter via the card's own keydown effect
       } else if (e.key === "d") {
         if (!selectedRef.current) return;
         e.preventDefault();
-        setDenyTriggeredId(selectedRef.current);
+        // Fix 3: increment seq so the target card opens its deny strip
+        setDenyRequest((prev) => ({
+          id: selectedRef.current!,
+          seq: (prev?.id === selectedRef.current ? prev.seq : 0) + 1,
+        }));
       }
     };
     window.addEventListener("keydown", handler);
@@ -648,9 +717,10 @@ export default function App() {
                     inFocusMode={focusMode && !isSelected}
                     onSelect={() => {
                       setSelectedId(a.toolCallId);
-                      setDenyTriggeredId(null);
+                      setDenyRequest(null);
                     }}
-                    forceExpand={(focusMode && isSelected && isDestructive) || denyTriggeredId === a.toolCallId}
+                    forceExpand={(focusMode && isSelected && isDestructive) || denyRequest?.id === a.toolCallId}
+                    denyRequestId={denyRequest?.id === a.toolCallId ? denyRequest.seq : 0}
                   />
                 );
               })}
@@ -681,6 +751,7 @@ export default function App() {
                     inFocusMode={focusMode}
                     onSelect={() => {}}
                     forceExpand={false}
+                    denyRequestId={0}
                   />
                 ))}
               </div>

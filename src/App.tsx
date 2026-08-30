@@ -215,57 +215,52 @@ function ApprovalCard({
     <div
       onClick={onSelect}
       data-card-id={a.toolCallId}
+      data-kind={destructive ? "destructive" : "pending"}
+      data-selected={selected ? "true" : undefined}
       className={[
-        "card-enter card-hover rounded-xl bg-card hairline p-5 cursor-pointer",
-        destructive ? "glow-red" : "",
-        selected ? "ring-2 ring-accent-blue/60 ring-offset-2 ring-offset-canvas" : "",
+        "row-enter approval-row px-4 py-3.5 cursor-pointer",
         inFocusMode && !selected ? "opacity-24 pointer-events-none" : "",
       ].join(" ")}
       style={{
         "--enter-delay": `${enterDelay}ms`,
         ...(inFocusMode && selected ? { maxWidth: "560px", margin: "0 auto" } : {}),
-        transition: "opacity 200ms ease",
+        transition: "opacity 200ms ease, background-color 120ms ease",
       } as React.CSSProperties}
     >
-      {/* card header */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span
-          className={`h-2.5 w-2.5 shrink-0 rounded-full bg-accent-red ${destructive ? "pulse-ring" : ""}`}
-        />
-        <span className="text-ink font-semibold text-[15px]">{a.agentName}</span>
-        <span className="text-ash text-[13px] truncate min-w-0">{a.sessionTitle}</span>
+      {/* row header — 13 / 12 / 11 */}
+      <div className="flex items-baseline gap-2 min-w-0">
+        <span className="shrink-0 text-[13px] font-medium text-ink tracking-[-0.02em]">
+          {a.agentName}
+        </span>
+        {destructive && (
+          <span className="shrink-0 align-super text-[9px] font-semibold uppercase tracking-[0.08em] text-accent-red">
+            kill
+          </span>
+        )}
+        <span className="text-ash text-[12px] truncate min-w-0">{a.sessionTitle}</span>
         {demo && (
-          <span className="shrink-0 rounded-full border border-accent-blue/30 bg-accent-blue/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent-blue">
+          <span className="shrink-0 rounded-[4px] bg-accent-blue/[0.08] px-1.5 py-px text-[10px] font-medium text-accent-blue/90 ring-1 ring-inset ring-accent-blue/20">
             demo
           </span>
         )}
-        <span className="ml-auto text-ash text-[12px] shrink-0 tabular-nums">{timeAgo(a.since)}</span>
+        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-ash/80">{timeAgo(a.since)}</span>
       </div>
 
-      {/* destructive badge */}
-      {destructive && (
-        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-accent-red/10 border border-accent-red/25 px-2.5 py-0.5">
-          <span className="text-accent-red text-[11px] font-semibold uppercase tracking-wider">
-            ⚠ Hold to approve
-          </span>
+      {/* command well */}
+      <div className="mt-2.5 rounded-[6px] bg-canvas px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ring-1 ring-inset ring-white/[0.05]">
+        <div className="mb-1 text-[11px] font-medium text-ash tracking-[-0.01em]">
+          {a.kind === "approval" ? "Proposed command" : "Open question"}
         </div>
-      )}
-
-      {/* tool block */}
-      <div className="mt-4 rounded-lg bg-elevated hairline px-4 py-3">
-        <div className="text-[11px] uppercase tracking-widest text-ash/70 mb-1.5 font-medium">
-          {a.kind === "approval" ? "wants to run" : "is asking"}
-        </div>
-        <div className="font-mono text-[13px] text-accent-yellow break-all leading-snug">
+        <div className="font-mono text-[12px] leading-[1.45] tracking-[-0.01em] text-accent-yellow/90 break-all">
           {a.toolName}
         </div>
         {a.question && (
-          <div className="mt-2 text-body text-[14px] leading-relaxed">{a.question}</div>
+          <div className="mt-1.5 text-[13px] text-body leading-[1.5]">{a.question}</div>
         )}
         {a.toolArgs && (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="mt-2 text-[12px] text-accent-blue hover:text-accent-blue/80 transition-colors inline-flex items-center gap-1"
+            className="mt-2 text-[11px] text-ash hover:text-ink transition-colors inline-flex items-center gap-1"
           >
             <svg
               width="10"
@@ -280,7 +275,7 @@ function ApprovalCard({
           </button>
         )}
         {isExpanded && (
-          <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-canvas border border-hairline p-3 text-[12px] leading-relaxed text-body whitespace-pre-wrap break-all expand-pre">
+          <pre className="mt-2 max-h-56 overflow-auto rounded-[5px] bg-black/40 ring-1 ring-inset ring-white/[0.05] p-3 text-[12px] leading-relaxed text-body whitespace-pre-wrap break-all expand-pre">
             {a.toolArgs}
           </pre>
         )}
@@ -295,10 +290,10 @@ function ApprovalCard({
               key={chip}
               onClick={() => setDenyChip(denyChip === chip ? null : chip)}
               className={[
-                "h-8 rounded-full border px-3 text-[12px] font-medium transition-colors",
+                "h-7 rounded-[5px] px-2.5 text-[12px] font-medium transition-colors ring-1 ring-inset",
                 denyChip === chip
-                  ? "bg-accent-red/20 border-accent-red/50 text-accent-red"
-                  : "bg-elevated border-hairline text-ash hover:border-accent-red/40 hover:text-body",
+                  ? "bg-accent-red/20 ring-accent-red/50 text-accent-red"
+                  : "bg-elevated ring-white/[0.07] text-ash hover:ring-accent-red/40 hover:text-body",
               ].join(" ")}
             >
               {chip}
@@ -313,12 +308,12 @@ function ApprovalCard({
               if (e.key === "Enter" && denyReady) { e.preventDefault(); void actDeny(); }
               if (e.key === "Escape") { e.stopPropagation(); setDenyOpen(false); }
             }}
-            className="h-8 min-w-0 flex-1 rounded-full border border-hairline bg-elevated px-3 text-[12px] text-body placeholder:text-ash/50 outline-none focus:border-accent-red/40"
+            className="h-7 min-w-0 flex-1 rounded-[5px] bg-elevated px-2.5 text-[12px] text-body ring-1 ring-inset ring-white/[0.07] placeholder:text-ash/50 outline-none focus:ring-accent-red/40"
           />
           <button
             disabled={!denyReady || busy !== null}
             onClick={actDeny}
-            className="h-8 rounded-full bg-accent-red/15 border border-accent-red/35 px-4 text-[12px] font-medium text-accent-red hover:bg-accent-red/25 disabled:opacity-40 transition-colors"
+            className="h-7 rounded-[5px] bg-accent-red/15 px-3 text-[12px] font-medium text-accent-red ring-1 ring-inset ring-accent-red/35 hover:bg-accent-red/25 disabled:opacity-40 transition-colors"
           >
             {destructive && !denyReady ? "reason required" : "Confirm deny"}
           </button>
@@ -327,13 +322,13 @@ function ApprovalCard({
 
       {/* actions */}
       {a.kind === "approval" && !denyOpen && (
-        <div className="mt-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {/* Approve — hold-to-arm for destructive */}
           {destructive ? (
-            <div className="relative flex-1 overflow-hidden rounded-lg">
+            <div className="relative flex-1 overflow-hidden rounded-[6px]">
               {/* fill bar */}
               <div
-                className="pointer-events-none absolute inset-0 rounded-lg"
+                className="pointer-events-none absolute inset-y-0 left-0"
                 style={{
                   background: `rgba(255,97,97,0.4)`,
                   width: `${holdProgress * 100}%`,
@@ -348,14 +343,14 @@ function ApprovalCard({
                 onTouchStart={holdStart}
                 onTouchEnd={holdCancel}
                 onTouchCancel={holdCancel}  /* Fix 5: cancelled touches release the hold */
-                className="btn-approve relative w-full rounded-lg bg-accent-red/10 text-accent-red border border-accent-red/30 py-2.5 text-[14px] font-medium hover:bg-accent-red/18 hover:border-accent-red/50 disabled:opacity-40 select-none"
+                className="btn-approve relative w-full rounded-[6px] bg-accent-red/10 text-accent-red ring-1 ring-inset ring-accent-red/30 py-2 text-[13px] font-medium hover:bg-accent-red/18 disabled:opacity-40 select-none"
               >
                 {busy === "allow" ? (
                   <span className="inline-flex items-center gap-2">
                     <SpinnerIcon /> Approving…
                   </span>
                 ) : (
-                  "Hold to Approve"
+                  "Hold to approve"
                 )}
               </button>
             </div>
@@ -363,7 +358,7 @@ function ApprovalCard({
             <button
               disabled={busy !== null}
               onClick={actAllow}
-              className="btn-approve flex-1 rounded-lg bg-accent-green/12 text-accent-green border border-accent-green/30 py-2.5 text-[14px] font-medium hover:bg-accent-green/22 hover:border-accent-green/50 disabled:opacity-40 transition-colors"
+              className="btn-approve flex-1 rounded-[6px] bg-accent-green/12 text-accent-green py-2 text-[13px] font-medium hover:bg-accent-green/22 disabled:opacity-40 transition-colors shadow-[0_0_0_1px_rgba(89,212,153,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
             >
               {busy === "allow" ? (
                 <span className="inline-flex items-center gap-2">
@@ -377,7 +372,7 @@ function ApprovalCard({
           <button
             disabled={busy !== null}
             onClick={openDeny}
-            className="btn-deny flex-1 rounded-lg bg-accent-red/12 text-accent-red border border-accent-red/25 py-2.5 text-[14px] font-medium hover:bg-accent-red/22 hover:border-accent-red/45 disabled:opacity-40 transition-colors"
+            className="btn-deny flex-1 rounded-[6px] bg-accent-red/10 text-accent-red ring-1 ring-inset ring-accent-red/25 py-2 text-[13px] font-medium hover:bg-accent-red/20 disabled:opacity-40 transition-colors"
           >
             {busy === "deny" ? (
               <span className="inline-flex items-center gap-2">
@@ -387,11 +382,14 @@ function ApprovalCard({
               "Deny"
             )}
           </button>
+          {selected && !destructive && (
+            <kbd className="kbd hidden sm:inline-flex shrink-0" aria-hidden>↵</kbd>
+          )}
         </div>
       )}
       {a.kind === "question" && (
-        <div className="mt-3 text-[13px] text-ash leading-relaxed">
-          Answer this question in TrueForge — questions carry free-form context.
+        <div className="mt-2.5 text-[12px] text-ash leading-relaxed">
+          Answer this question in TrueForge. Questions carry free-form context.
         </div>
       )}
     </div>
@@ -422,7 +420,7 @@ function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterD
 
   return (
     <div
-      className="card-enter flex items-center gap-3 rounded-lg bg-surface hairline px-4 py-3 transition-colors hover:bg-elevated"
+      className="row-enter flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-elevated"
       style={{
         "--enter-delay": `${enterDelay}ms`,
         opacity: dimmed ? 0.24 : 1,
@@ -431,7 +429,7 @@ function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterD
     >
       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot[act.status]}`} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] text-ink font-medium">{label}</div>
+        <div className="truncate text-[13px] text-ink font-medium tracking-[-0.015em]">{label}</div>
         {totalTok > 0 && (
           <div className="mt-1.5 flex items-center gap-2">
             <div className="token-track">
@@ -455,14 +453,14 @@ function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterD
         )}
       </div>
       <div className="text-right text-[12px] shrink-0">
-        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        <span className={`inline-block rounded-[4px] px-1.5 py-px text-[10px] font-medium ${
           act.status === "waiting"
             ? "bg-accent-red/12 text-accent-red"
             : act.status === "running"
               ? "bg-accent-blue/12 text-accent-blue"
               : act.status === "error"
                 ? "bg-accent-yellow/12 text-accent-yellow"
-                : "bg-surface text-ash"
+                : "text-ash"
         }`}>
           {act.status}
         </span>
@@ -493,15 +491,15 @@ function SpinnerIcon() {
 
 function ErrorBanner() {
   return (
-    <div className="card-enter rounded-lg bg-surface hairline p-4 text-[13px] text-ash">
+    <div className="row-enter px-3.5 py-3 text-[12px] text-ash">
       <div className="flex items-center gap-2 mb-1">
         <span className="h-1.5 w-1.5 rounded-full bg-accent-yellow" />
-        <span className="text-accent-yellow font-medium">TrueForge unreachable</span>
+        <span className="text-accent-yellow font-medium text-[13px]">TrueForge unreachable</span>
       </div>
-      <p>
+      <p className="leading-[1.5]">
         Can't reach{" "}
         <span className="font-mono text-body">localhost:8790</span>. Start it with{" "}
-        <span className="font-mono text-body">npx @truefoundry/trueforge</span>.
+        <kbd className="kbd kbd-mono">npx @truefoundry/trueforge</kbd>.
       </p>
     </div>
   );
@@ -518,48 +516,51 @@ function timeShort(iso: string): string {
 function DecisionPanel() {
   const { log, stats } = useDecisionLog();
   const recent = [...log].slice(-6).reverse();
+  const secondary =
+    stats.medianResponseMs != null
+      ? { value: `${(stats.medianResponseMs / 1000).toFixed(1)}s`, label: "median response" }
+      : stats.approveRate != null
+        ? { value: `${Math.round(stats.approveRate * 100)}%`, label: "approve rate" }
+        : null;
   return (
     <div className="mt-8">
-      <h2 className="mb-3 text-[13px] font-medium uppercase tracking-wider text-ash">
+      <h2 className="mb-2.5 text-[12px] font-medium text-mute tracking-[-0.01em]">
         Decision log
-        <span className="ml-2 font-mono tabular-nums opacity-60">{log.length}</span>
       </h2>
-      <div className="rounded-lg bg-surface hairline p-4">
-        <div className="mb-3 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <div className="text-[18px] font-semibold text-accent-green tabular-nums">{stats.totalApproved}</div>
-            <div className="text-[11px] text-ash uppercase tracking-wider">approved</div>
+      <div className="queue-well well-divide">
+        {/* tally strip: one hero figure, subordinate figures, clock flushed right */}
+        <div className="flex h-8 items-baseline gap-6 px-4 sm:gap-8">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[22px] font-medium tabular-nums tracking-[-0.03em] text-ink leading-none">
+              {log.length}
+            </span>
+            <span className="text-[12px] text-ash">decided</span>
           </div>
-          <div>
-            <div className="text-[18px] font-semibold text-accent-red tabular-nums">{stats.totalDenied}</div>
-            <div className="text-[11px] text-ash uppercase tracking-wider">denied</div>
+          <div className="flex items-baseline gap-1.5 text-[12px] text-ash">
+            <span className="tabular-nums text-accent-green">{stats.totalApproved}</span> approved
           </div>
-          <div>
-            <div className="text-[18px] font-semibold text-ink tabular-nums">
-              {stats.medianResponseMs != null
-                ? `${(stats.medianResponseMs / 1000).toFixed(1)}s`
-                : stats.approveRate != null
-                  ? `${Math.round(stats.approveRate * 100)}%`
-                  : "–"}
+          <div className="flex items-baseline gap-1.5 text-[12px] text-ash">
+            <span className="tabular-nums text-accent-red">{stats.totalDenied}</span> denied
+          </div>
+          {secondary && (
+            <div className="ml-auto hidden items-baseline gap-1.5 text-[12px] text-ash tabular-nums sm:flex">
+              {secondary.label} <span className="text-body">{secondary.value}</span>
             </div>
-            <div className="text-[11px] text-ash uppercase tracking-wider">
-              {stats.medianResponseMs != null ? "median response" : "approve rate"}
-            </div>
-          </div>
+          )}
         </div>
         {recent.length > 0 ? (
-          <div className="flex flex-col gap-1.5 border-t border-hairline pt-3">
+          <div>
             {recent.map((d) => (
-              <div key={d.id} className="flex items-center gap-2 text-[12px]">
+              <div key={d.id} className="flex items-center gap-2 px-4 py-1.5 text-[12px]">
                 <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${d.decision === "approve" ? "bg-accent-green" : "bg-accent-red"}`} />
                 <span className="truncate font-mono text-body flex-1">{d.toolName.split(" ")[0]}</span>
-                <span className="text-ash shrink-0">{(d.latencyMs / 1000).toFixed(0)}s wait</span>
-                <span className="text-ash shrink-0 tabular-nums">{timeShort(d.timestamp)}</span>
+                <span className="text-ash shrink-0 tabular-nums">{(d.latencyMs / 1000).toFixed(0)}s wait</span>
+                <span className="text-ash/70 shrink-0 tabular-nums">{timeShort(d.timestamp)}</span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="border-t border-hairline pt-3 text-[12px] text-ash">
+          <div className="px-4 py-[18px] text-[12px] text-ash">
             Decisions you make here appear with response-time stats.
           </div>
         )}
@@ -702,26 +703,21 @@ export default function App() {
               <circle cx="7" cy="7" r="2" fill="currentColor" />
             </svg>
           </div>
-          <h1 className="text-ink text-[17px] font-semibold tracking-tight">ApproveDeck</h1>
-          <span className="hidden sm:block text-ash text-[13px]">mission control</span>
-          <div className="ml-auto flex items-center gap-3 flex-wrap justify-end">
+          <h1 className="text-ink text-[15px] font-medium tracking-[-0.02em]">ApproveDeck</h1>
+          <span className="hidden sm:block text-ash text-[12px]">mission control</span>
+          <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
             <StatusPill waiting={waiting.length} error={error} lastPoll={lastPoll} />
             <button
               onClick={toggleDemo}
               aria-pressed={demoMode}
               className={[
-                "rounded-md px-3 py-1.5 text-[12px] transition-colors",
-                demoMode
-                  ? "bg-accent-blue/15 border border-accent-blue/40 text-accent-blue"
-                  : "bg-elevated hairline text-body hover:text-ink hover:bg-surface",
+                "kbd",
+                demoMode ? "text-accent-blue" : "",
               ].join(" ")}
             >
               {demoMode ? "Exit demo" : "Demo"}
             </button>
-            <button
-              onClick={refresh}
-              className="rounded-md bg-elevated hairline px-3 py-1.5 text-[12px] text-body hover:text-ink hover:bg-surface transition-colors"
-            >
+            <button onClick={refresh} className="kbd">
               Refresh
             </button>
           </div>
@@ -738,13 +734,13 @@ export default function App() {
         }}
       >
         <div
-          className="flex items-center gap-3 text-[11px] font-mono"
-          style={{ opacity: allCards.length > 0 ? 1 : 0.45 }}
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-ash"
+          style={{ opacity: allCards.length > 0 ? 1 : 0.55 }}
         >
-          <span className="text-ash/60"><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">j/k</kbd> navigate</span>
-          <span className="text-ash/60"><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">↵</kbd> approve</span>
-          <span className="text-ash/60"><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">d</kbd> deny</span>
-          <span className="text-ash/60"><kbd className="rounded border border-hairline px-1 py-0.5 text-ash">esc</kbd> clear</span>
+          <span className="flex items-center gap-1.5"><kbd className="kbd">j</kbd><kbd className="kbd">k</kbd> navigate</span>
+          <span className="flex items-center gap-1.5"><kbd className="kbd">↵</kbd> approve</span>
+          <span className="flex items-center gap-1.5"><kbd className="kbd">d</kbd> deny</span>
+          <span className="flex items-center gap-1.5"><kbd className="kbd">esc</kbd> clear</span>
         </div>
       </div>
 
@@ -754,7 +750,7 @@ export default function App() {
         {/* ── approval column ── */}
         <section className={hasPending ? "pending-orb" : ""}>
           <h2
-            className="card-enter mb-4 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
+            className="card-enter mb-2.5 flex items-baseline gap-2 text-[12px] font-medium text-mute tracking-[-0.01em]"
             style={{
               "--enter-delay": "40ms",
               opacity: focusMode ? 0.24 : 1,
@@ -762,14 +758,14 @@ export default function App() {
             } as React.CSSProperties}
           >
             Needs a human
-            <span className="ml-2 tabular-nums font-mono text-ash">{waiting.length}</span>
+            <span className="tabular-nums text-ash">{waiting.length}</span>
           </h2>
 
-          {waiting.length === 0 ? (
-            <EmptyState onDemo={toggleDemo} />
-          ) : (
-            <div className="flex flex-col gap-4">
-              {waiting.map((a, i) => {
+          <div className="queue-well well-divide">
+            {waiting.length === 0 ? (
+              <EmptyState onDemo={toggleDemo} />
+            ) : (
+              waiting.map((a, i) => {
                 const isSelected = a.toolCallId === selectedId;
                 const isDestructiveCard = isDestructive(a.toolName, a.toolArgs);
                 return (
@@ -777,7 +773,7 @@ export default function App() {
                     key={a.toolCallId}
                     a={a}
                     onDecide={handleDecide}
-                    enterDelay={80 + i * 60}
+                    enterDelay={80 + i * 40}
                     selected={isSelected}
                     inFocusMode={focusMode && !isSelected}
                     onSelect={() => {
@@ -788,14 +784,14 @@ export default function App() {
                     denyRequestId={denyRequest?.id === a.toolCallId ? denyRequest.seq : 0}
                   />
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
 
           {questions.length > 0 && (
             <>
               <h2
-                className="card-enter mb-4 mt-10 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
+                className="card-enter mb-2.5 mt-8 flex items-baseline gap-2 text-[12px] font-medium text-mute tracking-[-0.01em]"
                 style={{
                   "--enter-delay": "120ms",
                   opacity: focusMode ? 0.24 : 1,
@@ -803,15 +799,15 @@ export default function App() {
                 } as React.CSSProperties}
               >
                 Open questions
-                <span className="ml-2 tabular-nums font-mono text-ash">{questions.length}</span>
+                <span className="tabular-nums text-ash">{questions.length}</span>
               </h2>
-              <div className="flex flex-col gap-4">
+              <div className="queue-well well-divide">
                 {questions.map((a, i) => (
                   <ApprovalCard
                     key={a.toolCallId}
                     a={a}
                     onDecide={handleDecide}
-                    enterDelay={120 + i * 60}
+                    enterDelay={120 + i * 40}
                     selected={false}
                     inFocusMode={focusMode}
                     onSelect={() => {}}
@@ -827,7 +823,7 @@ export default function App() {
         {/* ── sessions rail ── */}
         <aside>
           <h2
-            className="card-enter mb-4 text-[12px] font-semibold uppercase tracking-widest text-ash/80"
+            className="card-enter mb-2.5 flex items-baseline gap-2 text-[12px] font-medium text-mute tracking-[-0.01em]"
             style={{
               "--enter-delay": "60ms",
               opacity: focusMode ? 0.24 : 1,
@@ -835,23 +831,23 @@ export default function App() {
             } as React.CSSProperties}
           >
             Agent sessions
-            <span className="ml-2 tabular-nums font-mono text-ash">{activity.length}</span>
+            <span className="tabular-nums text-ash">{activity.length}</span>
           </h2>
-          <div className="flex flex-col gap-2">
+          <div className="queue-well well-divide">
             {activity.map((act, i) => (
-              <ActivityRow key={act.session.id} act={act} enterDelay={100 + i * 40} dimmed={focusMode} />
+              <ActivityRow key={act.session.id} act={act} enterDelay={100 + i * 30} dimmed={focusMode} />
             ))}
             {activity.length === 0 && !error && (
               <div
-                className="card-enter rounded-lg bg-surface hairline px-4 py-6 text-center"
+                className="row-enter px-3.5 py-[18px]"
                 style={{
                   "--enter-delay": "120ms",
                   opacity: focusMode ? 0.24 : 1,
                   transition: "opacity 200ms ease",
                 } as React.CSSProperties}
               >
-                <div className="text-[13px] text-ash">No active sessions</div>
-                <div className="mt-1 text-[12px] text-ash/60">Start a TrueForge agent to see activity here.</div>
+                <div className="text-[13px] text-ink tracking-[-0.015em]">No agents running</div>
+                <div className="mt-1 text-[12px] text-ash">Start a TrueForge agent to see activity here.</div>
               </div>
             )}
             {error && <ErrorBanner />}

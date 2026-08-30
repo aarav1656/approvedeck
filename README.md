@@ -2,58 +2,73 @@
 
 **Mission control for TrueForge approvals.**
 
-Agent harnesses stop and wait for a human before anything irreversible. But
-the human is buried in a chat transcript. When you run five agents, the
-approval that matters is three tabs deep and forty messages up.
+An agent harness that stops before anything irreversible is only half the
+story. The other half is the human: where do all those approval requests go
+when you run five agents at once?
 
-ApproveDeck is a dedicated approval surface for
-[TrueForge](https://github.com/truefoundry/trueforge). One screen:
+TrueForge's chat UI shows approvals one session at a time. ApproveDeck shows
+**every agent waiting on a human, across every session, in one deck**: what
+the agent wants to run, the exact tool payload, how long it has been waiting,
+and one-click Approve / Deny that resumes the agent through the TrueForge API.
 
-- **Needs a human**: every `tool.approval_required` gate across every
-  session, as a card: which agent, which tool, the exact payload, how long
-  it has been waiting. Destructive tools glow red and pulse.
-- **Approve / Deny**: one click resolves the gate straight through the
-  TrueForge API (`user.tool_approval` turn input). The agent resumes
-  immediately.
-- **Open questions**: `ask_user_question` events surface alongside, so you
-  see everything blocked on you, not just approvals.
-- **Agent sessions**: a live rail of all sessions with status, recent tool
-  calls, and token spend.
+![pending approval](screenshot-pending.png)
 
-## Why this matters
+## What it does
 
-The harness's approval gate is only as good as the human's response time.
-A gate nobody sees is a gate that silently stalls the agent, or worse, gets
-rubber-stamped later without reading. ApproveDeck makes the human-in-the-loop
-step a first-class surface: visible, contextual, and fast.
+- **Approval inbox**: polls the TrueForge REST API (`/sessions`, `/turns`,
+  `/events`) and surfaces every `tool.approval_required` pause across all
+  sessions. Destructive-looking tools (execute/delete/drop) get a red pulse.
+- **Payload inspection**: the exact MCP tool call and its full JSON arguments,
+  one click away, so you approve what the agent is actually doing, not a vibe.
+- **One-click decide**: Approve or Deny posts a `user.tool_approval` turn to
+  the session and the agent resumes immediately. Deny carries a reason.
+- **Fleet view**: every agent session with live status (running / waiting /
+  idle / error), recent tool calls, and token spend.
+- **Open questions**: `ask_user_question` pauses are listed too, so you can
+  see which agents are blocked on context, not just on permission.
+
+## Why this exists
+
+We built [SafeRun](https://github.com/kamalbuilds/saferun) (a database
+guardian agent) during the same hackathon and immediately hit the operator
+problem: with several sessions running, an approval gate fired in a tab we
+were not looking at, and an agent sat blocked for twenty minutes. The harness
+did its job. The human missed it. ApproveDeck is the missing pager.
 
 ## Run it
 
 ```bash
-# TrueForge running locally on :8790
-npx @truefoundry/trueforge
+# 1. TrueForge running locally
+npx @truefoundry/trueforge          # http://localhost:8790
 
-# ApproveDeck
+# 2. ApproveDeck
 npm install
-npm run dev     # http://localhost:5199 (proxies /api -> localhost:8790)
+npm run dev                          # http://localhost:5199 (proxies /api -> 8790)
 ```
 
-## How it works
+Run any agent with approval-gated tools. When it pauses, the card appears.
 
-- Polls `GET /api/v1/sessions`, walks each session's latest turn, and reads
-  `state.required_actions` for pending gates.
-- Correlates each pending `tool_call_id` with the turn's event stream to
-  recover the tool name and full arguments (streamed argument deltas are
-  reassembled client-side).
-- MCP calls through TrueForge's `call_tool` wrapper are unwrapped so the card
-  shows the real tool (`execute_approved_operation (saferun-db)`), not the
-  wrapper.
-- Decisions POST a `user.tool_approval` input to `/sessions/:id/turns`.
+## Verified end to end
 
-No mocks: every card on screen is a real gate in a real running harness.
+No mocks: during development a real SafeRun agent hit its
+`execute_approved_operation` gate, ApproveDeck showed the card, we clicked
+Approve **in this UI**, and the operation executed against a live Postgres
+database (23 payments deleted with a sandbox-verified rollback on file,
+then restored). Screenshots in this repo are from that run.
 
 ## Design
 
-Raycast-inspired dark system: near-black canvas (#07080a), hairline borders,
-Inter with ss03, accent colors reserved for state (red = waiting on you,
-green = approve, blue = running).
+Raycast-style dark system: near-black canvas (#07080a), hairline borders,
+Inter with ss03, saturated accents reserved for meaning (red = waiting on
+you, green = approve, blue = running). Tokens live in `src/index.css`
+(Tailwind v4 `@theme`).
+
+## Built during the Agent Harness Hackathon
+
+August 24–30, 2026 · WeMakeDevs × TrueFoundry × Qodo.
+AI coding assistants were used (disclosed per rules); every substantive
+change goes through a Qodo-reviewed pull request.
+
+## Qodo Code Review Evidence
+
+<!-- filled after review cycle -->

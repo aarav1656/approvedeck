@@ -191,6 +191,32 @@ describe("deriveTimeline", () => {
     expect(exec.detail).toContain("deleted 2 rows");
   });
 
+  it("summarises a pretty-printed JSON response instead of a bare brace", () => {
+    const nodes = deriveTimeline({
+      session: SESSION,
+      turns,
+      eventsByTurn: {
+        "turn_1.local": [
+          {
+            type: "model.message",
+            id: "m",
+            created_at: "2026-08-30T13:33:00.000Z",
+            tool_calls: [{ id: "c1", function: { name: "run_readonly_query", arguments: "{}" } }],
+          },
+          {
+            type: "tool.response",
+            id: "r",
+            created_at: "2026-08-30T13:33:01.000Z",
+            tool_call_id: "c1",
+            content: '{\n  "rows": 7992,\n  "ok": true\n}',
+          },
+        ],
+      },
+    });
+    const tool = nodes.find((n) => n.kind === "tool")!;
+    expect(tool.detail).toBe('{ "rows": 7992, "ok": true }');
+  });
+
   it("closes the turn with its status and token count", () => {
     const end = build().find((n) => n.kind === "turn-end")!;
     expect(end.label).toBe("turn done");

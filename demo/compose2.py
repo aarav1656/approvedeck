@@ -37,7 +37,9 @@ CAPTIONS = {
     "aim-hold":     "Destructive tools cannot be approved by a stray click",
     "holding":      "Hold to approve: 650ms of deliberate intent",
     "approved":     "Approved. The agent resumes through the harness API",
-    "custody":      "Chain of custody: every session's real harness events",
+    "aim-session":  "Pick any session to replay what the agent actually did",
+    "custody":      "Chain of custody: the audit spine for that session",
+    "custody-spine": "Real harness events in order, with real durations",
     "log":          "Decision log: who decided what, and how long it waited",
 }
 

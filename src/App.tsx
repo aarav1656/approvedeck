@@ -229,7 +229,7 @@ function ApprovalCard({
     >
       {/* row header — 13 / 12 / 11 */}
       <div className="flex items-baseline gap-2 min-w-0">
-        <span className="shrink-0 text-[13px] font-medium text-ink tracking-[-0.02em]">
+        <span className="min-w-0 max-w-[55%] truncate text-[13px] font-medium text-ink tracking-[-0.02em]">
           {a.agentName}
         </span>
         {destructive && (

@@ -410,10 +410,13 @@ function ActivityRow({ act, enterDelay, dimmed }: { act: SessionActivity; enterD
             </span>
           </div>
         )}
-        {totalTok === 0 && (
+        {act.lastToolCalls.length > 0 && (
           <div className="truncate text-[12px] text-ash font-mono mt-0.5">
-            {act.lastToolCalls.map((c) => c.name.split(" ")[0]).join(" · ") || "no activity"}
+            {act.lastToolCalls.map((c) => c.name.split(" ")[0]).join(" · ")}
           </div>
+        )}
+        {totalTok === 0 && act.lastToolCalls.length === 0 && (
+          <div className="truncate text-[12px] text-ash font-mono mt-0.5">no activity</div>
         )}
       </div>
       <div className="text-right text-[12px] shrink-0">

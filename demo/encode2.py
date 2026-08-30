@@ -29,8 +29,10 @@ BEAT_SECONDS = {
     "aim-hold":     2.5,
     "holding":      5.0,
     "approved":     7.0,
-    "custody":     11.0,
-    "log":         12.0,
+    "aim-session":  2.0,
+    "custody":      5.0,
+    "custody-spine": 8.0,
+    "log":          8.0,
 }
 
 

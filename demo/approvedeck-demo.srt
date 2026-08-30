@@ -1,0 +1,43 @@
+1
+00:00:00,000 --> 00:00:07,000
+Agent harnesses stop and wait for a human before anything irreversible.
+
+2
+00:00:07,000 --> 00:00:14,000
+But the pause is buried in a chat transcript.
+
+3
+00:00:14,000 --> 00:00:21,000
+Run five agents and the approval that matters is three tabs deep.
+
+4
+00:00:21,000 --> 00:00:30,000
+ApproveDeck is mission control for TrueForge approvals. One screen, every gate.
+
+5
+00:00:30,000 --> 00:00:39,000
+Each card: which agent, which tool, the exact payload, how long it waited.
+
+6
+00:00:39,000 --> 00:00:47,000
+Destructive tools glow red and require a 650 millisecond hold to arm.
+
+7
+00:00:47,000 --> 00:00:56,000
+One hold, and the decision posts straight back into the TrueForge API.
+
+8
+00:00:56,000 --> 00:01:04,000
+The agent resumes immediately. The deck goes back to all clear.
+
+9
+00:01:04,000 --> 00:01:13,000
+This run was real: 1,143 rows deleted in a live Postgres database.
+
+10
+00:01:13,000 --> 00:01:21,000
+With a verified rollback on file, and a full chain of custody.
+
+11
+00:01:21,000 --> 00:01:29,000
+Built on TrueForge. For everyone running more agents than browser tabs.

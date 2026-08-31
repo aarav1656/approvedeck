@@ -1,0 +1,32 @@
+flowchart TB
+  subgraph H1["TrueForge harness"]
+    S["GET /api/v1/sessions"]
+    RA["state.required_actions<br/>on each session"]
+  end
+
+  subgraph D["ApproveDeck"]
+    POLL["poll on an interval"]
+    READ["read required_actions"]
+    REASSEMBLE["reassemble streamed deltas,<br/>keyed on the tool call id"]
+    UNWRAP["unwrap the call_tool envelope<br/>to get the real tool name"]
+    CARD["render the gate card:<br/>agent, tool, arguments, wait time"]
+    POST["POST a user.tool_approval turn"]
+  end
+
+  subgraph H2["TrueForge harness"]
+    RESUME["agent picks up mid turn<br/>and keeps going"]
+  end
+
+  S --> POLL
+  RA --> READ
+  POLL --> READ
+  READ --> REASSEMBLE
+  REASSEMBLE --> UNWRAP
+  UNWRAP --> CARD
+  CARD -- "a human decides" --> POST
+  POST --> RESUME
+
+  classDef box fill:#0f1114,stroke:#242728,color:#e7e9ea;
+  classDef act fill:#171012,stroke:#5a3030,color:#f2a9a3;
+  class S,RA,POLL,READ,REASSEMBLE,UNWRAP,RESUME box;
+  class CARD,POST act;

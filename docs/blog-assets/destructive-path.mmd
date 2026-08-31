@@ -1,0 +1,43 @@
+flowchart TB
+  GATE["a gate arrives:<br/>tool name plus arguments"]
+  NAME{"name matches exec, execute,<br/>delete, drop, truncate, write?"}
+  PAYLOAD{"arguments match<br/>drop, delete, truncate, alter?"}
+  SAFE["safe path:<br/>Enter approves"]
+  ARMED["destructive path:<br/>Enter alone does nothing"]
+
+  HOLD["hold the key or button<br/>for 650ms"]
+  EARLY{"let go before 650ms?"}
+  CANCEL["nothing is posted,<br/>the fill snaps back to empty"]
+  APPROVE["approval posts,<br/>the agent resumes"]
+
+  DENY["press d"]
+  CHIPS["pick a reason chip:<br/>wrong env, too broad,<br/>needs human, policy"]
+  BLOCK{"reason given?"}
+  SENT["denial posts<br/>carrying that reason"]
+
+  GATE --> NAME
+  NAME -- no --> PAYLOAD
+  NAME -- yes --> ARMED
+  PAYLOAD -- yes --> ARMED
+  PAYLOAD -- no --> SAFE
+
+  ARMED --> HOLD
+  ARMED --> DENY
+
+  HOLD --> EARLY
+  EARLY -- yes --> CANCEL
+  EARLY -- "no, it armed" --> APPROVE
+
+  DENY --> CHIPS
+  CHIPS --> BLOCK
+  BLOCK -- "not yet, deny stays disabled" --> CHIPS
+  BLOCK -- yes --> SENT
+
+  classDef box fill:#0f1114,stroke:#242728,color:#e7e9ea;
+  classDef ask fill:#101215,stroke:#33383d,color:#cfd2d4;
+  classDef act fill:#171012,stroke:#5a3030,color:#f2a9a3;
+  classDef ok fill:#0d1310,stroke:#2a4f38,color:#a6e3ba;
+  class GATE,SAFE,HOLD,CHIPS,DENY box;
+  class NAME,PAYLOAD,EARLY,BLOCK ask;
+  class ARMED,APPROVE,SENT act;
+  class CANCEL ok;

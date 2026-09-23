@@ -8,6 +8,7 @@ import {
   sendApproval,
 } from "./api";
 import { appendDecision } from "./decisionLog";
+import { buildDemoCards, demoLatencyMs, isDemoCard } from "./demoCards";
 
 // ---------- domain model ----------
 
@@ -165,6 +166,7 @@ async function fetchSession(
 
 export function useApprovalFeed(pollMs = 4000) {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const [demoCards, setDemoCards] = useState<PendingApproval[]>([]);
   const [activity, setActivity] = useState<SessionActivity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lastPoll, setLastPoll] = useState<Date | null>(null);
@@ -222,13 +224,25 @@ export function useApprovalFeed(pollMs = 4000) {
   }, [refresh, pollMs]);
 
   const decide = useCallback(
-    async (a: PendingApproval, allow: boolean) => {
+    async (a: PendingApproval, allow: boolean, reason?: string) => {
+      // Demo cards resolve entirely client-side: no POST, realistic latency.
+      if (isDemoCard(a)) {
+        appendDecision({
+          sessionId: a.sessionId,
+          toolName: a.toolName,
+          decision: allow ? "approve" : "deny",
+          latencyMs: demoLatencyMs(),
+        });
+        setDemoCards((prev) => prev.filter((p) => p.toolCallId !== a.toolCallId));
+        return;
+      }
+
       const clickedAt = Date.now();
       const latencyMs = a.since
         ? Math.max(0, clickedAt - new Date(a.since).getTime())
         : 0;
 
-      await sendApproval(a.sessionId, a.threadId, a.toolCallId, allow);
+      await sendApproval(a.sessionId, a.threadId, a.toolCallId, allow, reason);
 
       appendDecision({
         sessionId: a.sessionId,
@@ -243,5 +257,19 @@ export function useApprovalFeed(pollMs = 4000) {
     [refresh],
   );
 
-  return { approvals, activity, error, lastPoll, decide, refresh };
+  /** Toggle the canned demo deck on/off. Purely client-side. */
+  const toggleDemo = useCallback(() => {
+    setDemoCards((prev) => (prev.length > 0 ? [] : buildDemoCards()));
+  }, []);
+
+  return {
+    approvals: [...demoCards, ...approvals],
+    activity,
+    error,
+    lastPoll,
+    decide,
+    refresh,
+    demoMode: demoCards.length > 0,
+    toggleDemo,
+  };
 }
